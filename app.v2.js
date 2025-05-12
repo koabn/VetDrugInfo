@@ -355,9 +355,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             try {
                 confirmationSection.style.display = 'block';
-                // Принудительно делаем видимыми элементы
-                confirmationSection.style.cssText = "display: block !important; visibility: visible !important; opacity: 1 !important;";
-                drugOptions.style.cssText = "display: block !important; visibility: visible !important; opacity: 1 !important; max-height: 500px; overflow-y: auto; margin-top: 10px;";
+                confirmationSection.classList.add('visible', 'active');
+                drugOptions.style.display = 'block';
+                drugOptions.classList.add('visible', 'active');
                 
                 // Проверяем текущие стили
                 console.log('Стили после установки:', {
@@ -565,20 +565,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Показываем блок выбора препаратов с принудительными стилями
-        confirmationSection.style.cssText = "display: block !important; visibility: visible !important; opacity: 1 !important;";
+        // Показываем блок выбора препаратов
+        confirmationSection.style.display = 'block';
+        confirmationSection.classList.add('visible', 'active');
         drugOptions.innerHTML = '';
-        drugOptions.style.cssText = "display: block !important; visibility: visible !important; opacity: 1 !important; max-height: 500px; overflow-y: auto;";
+        drugOptions.style.display = 'block';
+        drugOptions.classList.add('visible', 'active');
         
-        console.log('Установлены стили для отображения:', {
-            confirmationSectionStyle: confirmationSection.style.cssText,
-            drugOptionsStyle: drugOptions.style.cssText
+        console.log('Установлены классы для отображения:', {
+            confirmationSection: confirmationSection.className,
+            drugOptions: drugOptions.className
         });
         
         // Добавим заголовок для ясности
         const headerText = document.createElement('div');
         headerText.className = 'confirmation-header';
-        headerText.style.cssText = "margin-bottom: 10px; font-weight: bold; color: #333;";
         headerText.textContent = `Найдено ${results.length} препаратов. Выберите один из списка:`;
         drugOptions.appendChild(headerText);
         
@@ -590,19 +591,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const option = document.createElement('div');
             option.className = 'drug-option';
-            option.style.cssText = `
-                cursor: pointer;
-                padding: 10px;
-                margin: 8px 0;
-                border: 1px solid #e0e0e0;
-                border-radius: 5px;
-                background-color: #f5f5f5;
-                transition: all 0.2s ease;
-            `;
             
             const optionName = document.createElement('div');
             optionName.className = 'drug-option-name';
-            optionName.style.cssText = "font-weight: bold; color: #333; margin-bottom: 5px;";
             optionName.textContent = drug.name || 'Препарат без названия';
             option.appendChild(optionName);
             
@@ -628,7 +619,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (addInfo.length > 0) {
                 const optionDetails = document.createElement('div');
                 optionDetails.className = 'drug-option-details';
-                optionDetails.style.cssText = "color: #666; font-size: 0.9em; margin-top: 5px;";
                 optionDetails.innerHTML = addInfo.join('<br>');
                 option.appendChild(optionDetails);
             }
@@ -637,11 +627,11 @@ document.addEventListener('DOMContentLoaded', () => {
             option.addEventListener('click', function() {
                 console.log('Выбран препарат:', drug.name);
                 currentDrug = drug;
-                const selectedCategories = getSelectedCategories();
                 confirmationSection.style.display = 'none';
                 
                 // Показываем секцию с информацией о препарате
                 drugInfo.style.display = 'block';
+                drugInfo.classList.add('visible');
                 const resultsSection = document.getElementById('results');
                 if (resultsSection) {
                     resultsSection.style.display = 'block';
@@ -664,14 +654,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (results.length > 20) {
             const moreResults = document.createElement('div');
             moreResults.className = 'more-results';
-            moreResults.style.cssText = "padding: 10px; color: #666; font-style: italic;";
             moreResults.textContent = `Показаны первые 20 результатов из ${results.length}. Уточните запрос для более точных результатов.`;
             drugOptions.appendChild(moreResults);
         }
-        
-        // После добавления всех элементов в DOM, принудительно обновляем стили
-        confirmationSection.style.display = 'block';
-        drugOptions.style.display = 'block';
         
         // Через небольшую задержку проверяем видимость элементов
         setTimeout(() => {
@@ -687,30 +672,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 drugOptions: {
                     display: computedOptionsStyle.display,
                     visibility: computedOptionsStyle.visibility,
-                    opacity: computedOptionsStyle.opacity,
-                    height: computedOptionsStyle.height,
-                    maxHeight: computedOptionsStyle.maxHeight,
-                    overflow: computedOptionsStyle.overflow
+                    opacity: computedOptionsStyle.opacity
                 }
             });
             
-            // Если элементы все еще не видны, принудительно устанавливаем стили
+            // Если элементы все еще не видны, добавляем класс force-visible
             if (computedConfirmStyle.display === 'none' || computedOptionsStyle.display === 'none') {
-                console.log('Элементы всё еще не видны, применяем принудительные стили');
-                document.body.appendChild(document.createElement('style')).textContent = `
-                    #confirmation-section {
-                        display: block !important;
-                        visibility: visible !important;
-                        opacity: 1 !important;
-                    }
-                    #drug-options {
-                        display: block !important;
-                        visibility: visible !important;
-                        opacity: 1 !important;
-                        max-height: 500px !important;
-                        overflow-y: auto !important;
-                    }
-                `;
+                console.log('Элементы всё еще не видны, применяем дополнительные классы');
+                confirmationSection.classList.add('force-visible');
+                drugOptions.classList.add('force-visible');
             }
         }, 100);
     }
@@ -726,13 +696,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Показываем блок информации о препарате
         drugInfo.style.display = 'block';
+        drugInfo.classList.add('visible');
+        
         const resultsSection = document.getElementById('results');
         if (resultsSection) {
             resultsSection.style.display = 'block';
-            setTimeout(() => {
-                resultsSection.classList.add('visible');
-            }, 10);
+            resultsSection.classList.add('visible');
         }
+        
         drugContent.innerHTML = '';
         
         // Заголовок с названием препарата
@@ -822,7 +793,12 @@ document.addEventListener('DOMContentLoaded', () => {
         drugContent.appendChild(drugSummary);
         
         // Показываем кнопку "Сообщить об ошибке"
-        reportErrorBtn.style.display = 'flex';
+        if (reportErrorBtn) {
+            reportErrorBtn.style.display = 'flex';
+            reportErrorBtn.classList.add('visible');
+        }
+        
+        console.log('Информация о препарате успешно отображена');
     }
     
     // Функция для отображения модального окна сообщения об ошибке

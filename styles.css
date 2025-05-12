@@ -1521,4 +1521,37 @@ html {
 
 .form-submit:hover {
     background-color: var(--accent-color-light);
+}
+
+/* Добавленные стили для классов */
+.visible {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.active {
+    display: block !important;
+}
+
+.force-visible {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    max-height: 500px !important;
+    overflow-y: auto !important;
+}
+
+/* Класс для заголовка в блоке подтверждения */
+.confirmation-header {
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Класс для сообщения о дополнительных результатах */
+.more-results {
+    padding: 10px;
+    color: #666;
+    font-style: italic;
+    margin-top: 10px;
 } 
