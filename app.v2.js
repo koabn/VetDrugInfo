@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tg.MainButton.hide();
     
     // Определяем базовый URL для API
-    const API_BASE_URL = 'https://koabn.github.io/api';
+    const API_BASE_URL = 'https://koabn.github.io/VetDrugInfo/api';
     
     // Получаем элементы интерфейса
     const searchInput = document.getElementById('searchInput');
