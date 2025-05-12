@@ -236,85 +236,22 @@ body {
 }
 
 .drug-icons {
-    display: flex;
-    align-items: center;
-    margin-right: 10px;
+    display: none; /* Скрываем блок для иконок */
 }
 
 .prescription-status-icon,
 .drug-type-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 6px;
-    padding: 3px;
-    border-radius: 50%;
-    background-color: #f5f5f5;
+    display: none; /* Скрываем иконки */
 }
 
-.prescription-icon {
-    background-color: #ff9800; /* Оранжевый для рецептурных */
-    border-radius: 50%;
-}
-
-.prescription-icon path {
-    fill: white;
-}
-
-.otc-icon {
-    background-color: #4caf50; /* Зеленый для безрецептурных */
-    border-radius: 50%;
-}
-
-.otc-icon path {
-    fill: white;
-}
-
-.injection-icon {
-    background-color: #673ab7; /* Фиолетовый для инъекционных */
-    border-radius: 50%;
-}
-
-.injection-icon path {
-    stroke: white;
-    stroke-width: 1.5;
-    fill: none;
-}
-
-.tablet-icon {
-    background-color: #2196f3; /* Синий для таблеток */
-    border-radius: 50%;
-}
-
-.tablet-icon circle,
-.tablet-icon line {
-    stroke: white;
-    stroke-width: 2;
-}
-
-.liquid-icon {
-    background-color: #03a9f4; /* Голубой для жидкостей */
-    border-radius: 50%;
-}
-
-.liquid-icon path:first-child {
-    fill: white;
-}
-
-.liquid-icon path {
-    stroke: white;
-}
-
+/* Удаляем стили для различных иконок */
+.prescription-icon,
+.otc-icon,
+.injection-icon,
+.tablet-icon, 
+.liquid-icon,
 .external-icon {
-    background-color: #009688; /* Бирюзовый для наружных */
-    border-radius: 50%;
-}
-
-.external-icon path:first-child {
-    fill: white;
-}
-
-.external-icon path {
-    stroke: white;
+    display: none;
 }
 
 .drug-name {
@@ -325,7 +262,7 @@ body {
 }
 
 .drug-item-body {
-    padding-left: 40px; /* Отступ, чтобы текст был под названием, а не под иконками */
+    padding-left: 10px; /* Уменьшаем отступ, так как иконок больше нет */
 }
 
 .drug-active-ingredients {
@@ -340,19 +277,12 @@ body {
         padding: 12px;
     }
     
-    .prescription-status-icon,
-    .drug-type-icon {
-        width: 20px;
-        height: 20px;
-        margin-right: 4px;
-    }
-    
     .drug-name {
         font-size: 15px;
     }
     
     .drug-item-body {
-        padding-left: 30px;
+        padding-left: 10px;
     }
     
     .drug-active-ingredients {
@@ -365,20 +295,12 @@ body {
         padding: 10px;
     }
     
-    .prescription-status-icon,
-    .drug-type-icon {
-        width: 18px;
-        height: 18px;
-        margin-right: 3px;
-        padding: 2px;
-    }
-    
     .drug-name {
         font-size: 14px;
     }
     
     .drug-item-body {
-        padding-left: 25px;
+        padding-left: 10px;
     }
     
     .drug-active-ingredients {
@@ -1351,23 +1273,17 @@ html {
 }
 
 .modal-title {
-    display: flex;
-    align-items: center;
     font-weight: bold;
     font-size: 18px;
     color: #333;
 }
 
 .modal-title-text {
-    margin-left: 10px;
+    display: block;
 }
 
 .modal-icon {
-    width: 28px;
-    height: 28px;
-    margin-right: 8px;
-    padding: 4px;
-    border-radius: 50%;
+    display: none;
 }
 
 .close-modal {
@@ -1597,10 +1513,9 @@ html {
 
 .modal-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
+    justify-content: space-between;
+    padding: 15px 20px;
     border-bottom: 1px solid var(--separator-color);
 }
 
@@ -1764,152 +1679,11 @@ html {
 
 /* Стили для контейнера условий отпуска с иконками */
 .usage-container {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.usage-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 36px;
-    min-height: 36px;
-    background-color: var(--accent-color);
-    border-radius: 50%;
-    padding: 8px;
-    box-shadow: var(--shadow-light);
-    transition: all 0.3s ease;
-    position: relative;
-    cursor: help;
-}
-
-/* Всплывающая подсказка при наведении на иконку */
-.usage-icon::before {
-    content: attr(title);
-    position: absolute;
-    top: -40px;
-    left: 50%;
-    transform: translateX(-50%) scale(0.8);
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 12px;
-    white-space: nowrap;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.usage-icon::after {
-    content: '';
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%) scale(0.8);
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 6px solid rgba(0, 0, 0, 0.8);
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.usage-icon:hover::before,
-.usage-icon:hover::after {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(-50%) scale(1);
-}
-
-.usage-icon:hover {
-    transform: scale(1.1);
-    box-shadow: var(--shadow-hover);
+    display: block;
 }
 
 .usage-text {
-    flex: 1;
-}
-
-.prescription-icon {
-    fill: none;
-    stroke: white;
-    stroke-width: 1.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.no-prescription-icon {
-    fill: none;
-    stroke: white;
-    stroke-width: 1.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-/* Цвета для разных типов условий отпуска */
-.usage-container:has(.prescription-icon) .usage-icon,
-.prescription-container .usage-icon,
-.prescription-icon-container {
-    background-color: #ff7043; /* Оранжевый для рецептурных */
-}
-
-.usage-container:has(.no-prescription-icon) .usage-icon,
-.no-prescription-container .usage-icon,
-.no-prescription-icon-container {
-    background-color: #4caf50; /* Зеленый для безрецептурных */
-}
-
-.usage-container:has(.injection-icon) .usage-icon,
-.injection-container .usage-icon,
-.injection-icon-container {
-    background-color: #673ab7; /* Фиолетовый для инъекционных */
-}
-
-.usage-container:has(.tablet-icon) .usage-icon,
-.tablet-container .usage-icon,
-.tablet-icon-container {
-    background-color: #2196f3; /* Синий для таблеток */
-}
-
-.usage-container:has(.liquid-icon) .usage-icon,
-.liquid-container .usage-icon,
-.liquid-icon-container {
-    background-color: #03a9f4; /* Голубой для жидкостей */
-}
-
-.usage-container:has(.external-icon) .usage-icon,
-.external-container .usage-icon,
-.external-icon-container {
-    background-color: #009688; /* Бирюзовый для наружных средств */
-}
-
-/* Стили для иконок */
-.prescription-icon,
-.no-prescription-icon,
-.injection-icon,
-.tablet-icon,
-.liquid-icon,
-.external-icon {
-    fill: none;
-    stroke: white;
-    stroke-width: 1.5;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-/* Анимация при наведении на иконки */
-.usage-icon svg {
-    transition: transform 0.3s ease;
-}
-
-.usage-icon:hover svg {
-    transform: rotate(10deg);
+    display: block;
 }
 
 /* Медиа-запросы для мобильных устройств */
@@ -1938,190 +1712,6 @@ html {
     
     .usage-icon {
         margin-bottom: 6px;
-    }
-}
-
-/* Стили для фильтров типов препаратов */
-.medication-types-filter {
-    margin: 15px 0;
-    padding: 15px;
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.filter-title {
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: #444;
-}
-
-.filter-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.filter-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px 12px;
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 14px;
-}
-
-.filter-button:hover {
-    background-color: #f0f0f0;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.filter-button.active {
-    background-color: #2196f3;
-    color: white;
-    border-color: #2196f3;
-    font-weight: bold;
-}
-
-.filter-button.active svg {
-    stroke: white;
-    fill: white;
-}
-
-.filter-button.active[data-filter="prescription"] {
-    background-color: #ff9800; /* Оранжевый для рецептурных */
-    border-color: #ff9800;
-}
-
-.filter-button.active[data-filter="otc"] {
-    background-color: #4caf50; /* Зеленый для безрецептурных */
-    border-color: #4caf50;
-}
-
-.filter-button.active[data-filter="injection"] {
-    background-color: #673ab7; /* Фиолетовый для инъекционных */
-    border-color: #673ab7;
-}
-
-.filter-button.active[data-filter="tablet"] {
-    background-color: #2196f3; /* Синий для таблеток */
-    border-color: #2196f3;
-}
-
-.filter-button.active[data-filter="liquid"] {
-    background-color: #03a9f4; /* Голубой для жидкостей */
-    border-color: #03a9f4;
-}
-
-.filter-button.active[data-filter="external"] {
-    background-color: #009688; /* Бирюзовый для наружных */
-    border-color: #009688;
-}
-
-.mini-icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 5px;
-    stroke: currentColor;
-    fill: none;
-}
-
-/* Специфические стили для мини-иконок */
-.filter-button .prescription-icon path,
-.filter-button .otc-icon path {
-    fill: #444;
-    stroke: none;
-}
-
-.filter-button.active .prescription-icon path,
-.filter-button.active .otc-icon path {
-    fill: white;
-}
-
-.filter-button .injection-icon path {
-    stroke: #444;
-    stroke-width: 1.5;
-}
-
-.filter-button.active .injection-icon path {
-    stroke: white;
-}
-
-.filter-button .tablet-icon circle,
-.filter-button .tablet-icon line {
-    stroke: #444;
-}
-
-.filter-button.active .tablet-icon circle,
-.filter-button.active .tablet-icon line {
-    stroke: white;
-}
-
-.filter-button .liquid-icon path:first-child {
-    fill: #444;
-    stroke: none;
-}
-
-.filter-button.active .liquid-icon path:first-child {
-    fill: white;
-}
-
-.filter-button .external-icon path:first-child {
-    fill: #444;
-    stroke: none;
-}
-
-.filter-button.active .external-icon path:first-child {
-    fill: white;
-}
-
-/* Медиа-запрос для адаптации фильтров на мобильных устройствах */
-@media (max-width: 768px) {
-    .filter-options {
-        gap: 5px;
-    }
-    
-    .filter-button {
-        padding: 5px 10px;
-        font-size: 12px;
-    }
-    
-    .mini-icon {
-        width: 14px;
-        height: 14px;
-        margin-right: 3px;
-    }
-}
-
-@media (max-width: 480px) {
-    .filter-options {
-        gap: 4px;
-    }
-    
-    .filter-button {
-        padding: 4px 8px;
-        font-size: 11px;
-    }
-    
-    .mini-icon {
-        width: 12px;
-        height: 12px;
-        margin-right: 2px;
-    }
-    
-    .medication-types-filter {
-        padding: 10px;
-        margin: 10px 0;
-    }
-    
-    .filter-title {
-        margin-bottom: 6px;
-        font-size: 13px;
     }
 }
 
