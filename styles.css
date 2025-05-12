@@ -1618,4 +1618,183 @@ html {
     line-height: 1.5;
     color: var(--text-color);
     white-space: pre-line;
+}
+
+/* Стили для контейнера условий отпуска с иконками */
+.usage-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.usage-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 36px;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+    padding: 8px;
+    box-shadow: var(--shadow-light);
+    transition: all 0.3s ease;
+    position: relative;
+    cursor: help;
+}
+
+/* Всплывающая подсказка при наведении на иконку */
+.usage-icon::before {
+    content: attr(title);
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.8);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.usage-icon::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.8);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(0, 0, 0, 0.8);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.usage-icon:hover::before,
+.usage-icon:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) scale(1);
+}
+
+.usage-icon:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-hover);
+}
+
+.usage-text {
+    flex: 1;
+}
+
+.prescription-icon {
+    fill: none;
+    stroke: white;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.no-prescription-icon {
+    fill: none;
+    stroke: white;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Цвета для разных типов условий отпуска */
+.usage-container:has(.prescription-icon) .usage-icon,
+.prescription-container .usage-icon,
+.prescription-icon-container {
+    background-color: #ff7043; /* Оранжевый для рецептурных */
+}
+
+.usage-container:has(.no-prescription-icon) .usage-icon,
+.no-prescription-container .usage-icon,
+.no-prescription-icon-container {
+    background-color: #4caf50; /* Зеленый для безрецептурных */
+}
+
+.usage-container:has(.injection-icon) .usage-icon,
+.injection-container .usage-icon,
+.injection-icon-container {
+    background-color: #673ab7; /* Фиолетовый для инъекционных */
+}
+
+.usage-container:has(.tablet-icon) .usage-icon,
+.tablet-container .usage-icon,
+.tablet-icon-container {
+    background-color: #2196f3; /* Синий для таблеток */
+}
+
+.usage-container:has(.liquid-icon) .usage-icon,
+.liquid-container .usage-icon,
+.liquid-icon-container {
+    background-color: #03a9f4; /* Голубой для жидкостей */
+}
+
+.usage-container:has(.external-icon) .usage-icon,
+.external-container .usage-icon,
+.external-icon-container {
+    background-color: #009688; /* Бирюзовый для наружных средств */
+}
+
+/* Стили для иконок */
+.prescription-icon,
+.no-prescription-icon,
+.injection-icon,
+.tablet-icon,
+.liquid-icon,
+.external-icon {
+    fill: none;
+    stroke: white;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Анимация при наведении на иконки */
+.usage-icon svg {
+    transition: transform 0.3s ease;
+}
+
+.usage-icon:hover svg {
+    transform: rotate(10deg);
+}
+
+/* Медиа-запросы для мобильных устройств */
+@media (max-width: 768px) {
+    .usage-container {
+        gap: 8px;
+    }
+    
+    .usage-icon {
+        min-width: 32px;
+        min-height: 32px;
+        padding: 6px;
+    }
+    
+    .usage-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .usage-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .usage-icon {
+        margin-bottom: 6px;
+    }
 } 

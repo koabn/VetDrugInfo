@@ -797,7 +797,8 @@ document.addEventListener('DOMContentLoaded', () => {
             {
                 name: 'usage',
                 title: 'Условия отпуска',
-                category: 'Условия отпуска'
+                category: 'Условия отпуска',
+                customFormat: formatUsageWithIcon
             },
             // Производитель
             {
@@ -828,7 +829,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const contentElement = document.createElement('div');
                     contentElement.className = 'section-content';
-                    contentElement.textContent = section.customFormat ? section.customFormat(value) : value;
+                    
+                    if (section.customFormat) {
+                        // Если есть функция форматирования, используем ее
+                        const formattedContent = section.customFormat(value);
+                        if (typeof formattedContent === 'string') {
+                            contentElement.textContent = formattedContent;
+                        } else if (formattedContent instanceof HTMLElement) {
+                            contentElement.appendChild(formattedContent);
+                        } else if (formattedContent instanceof DocumentFragment) {
+                            contentElement.appendChild(formattedContent);
+                        }
+                    } else {
+                        contentElement.textContent = value;
+                    }
                     
                     sectionElement.appendChild(titleElement);
                     sectionElement.appendChild(contentElement);
@@ -847,6 +861,153 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         console.log('Информация о препарате успешно отображена');
+    }
+    
+    // Функция для форматирования условий отпуска с иконкой
+    function formatUsageWithIcon(usageText) {
+        if (!usageText) return '';
+        
+        const container = document.createElement('div');
+        container.className = 'usage-container';
+        
+        const textLower = usageText.toLowerCase();
+        
+        // Создаем иконку в зависимости от текста условий отпуска
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'usage-icon';
+        
+        let iconClass = '';
+        let baseTitle = '';
+        let isInjection = textLower.includes('укол') || textLower.includes('инъекц') || textLower.includes('шприц');
+        let isTablet = textLower.includes('таблет') || textLower.includes('капсул');
+        let isLiquid = textLower.includes('сироп') || textLower.includes('суспенз') || textLower.includes('раствор');
+        let isExternal = textLower.includes('наружн') || textLower.includes('мазь') || textLower.includes('крем') || textLower.includes('гель');
+        
+        if (textLower.includes('рецепт') || textLower.includes('рецептур')) {
+            baseTitle = 'Отпускается по рецепту';
+            iconClass = 'prescription-container';
+            
+            // Базовая иконка для рецептурного отпуска
+            let svgContent = `
+                <svg viewBox="0 0 24 24" width="24" height="24" class="prescription-icon">
+                    <path d="M9 12h6m-6-4h6m-6 8h3m2-12h5a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h5m3 0v4m-3-4v4"/>
+                </svg>
+            `;
+            
+            // Заменяем иконку в зависимости от формы препарата
+            if (isInjection) {
+                svgContent = `
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="injection-icon">
+                        <path d="M6 18L18 6m-9 9l3-3m-5-5l3-3m2 8l3-3m2 2l1-1m-5-5l3 3"/>
+                        <path d="M15 9L9 15"/>
+                    </svg>
+                `;
+                baseTitle = 'Инъекционный препарат (по рецепту)';
+                iconClass = 'injection-container';
+            } else if (isTablet) {
+                svgContent = `
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="tablet-icon">
+                        <circle cx="12" cy="12" r="7"/>
+                        <path d="M12 9v6"/>
+                        <path d="M9 12h6"/>
+                    </svg>
+                `;
+                baseTitle = 'Таблетки (по рецепту)';
+                iconClass = 'tablet-container';
+            } else if (isLiquid) {
+                svgContent = `
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="liquid-icon">
+                        <path d="M12 2v6l-3 6v6a2 2 0 002 2h2a2 2 0 002-2v-6l-3-6V2"/>
+                        <path d="M10 14h4"/>
+                    </svg>
+                `;
+                baseTitle = 'Жидкая форма (по рецепту)';
+                iconClass = 'liquid-container';
+            } else if (isExternal) {
+                svgContent = `
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="external-icon">
+                        <path d="M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        <path d="M12 7c2 0 4 1 4 3s-1 3-4 3-4-1-4-3 2-3 4-3z"/>
+                        <path d="M8 16h8"/>
+                    </svg>
+                `;
+                baseTitle = 'Наружное применение (по рецепту)';
+                iconClass = 'external-container';
+            }
+            
+            iconSpan.innerHTML = svgContent;
+            iconSpan.title = baseTitle;
+            iconSpan.classList.add(iconClass.replace('-container', '-icon-container'));
+            
+        } else {
+            baseTitle = 'Отпускается без рецепта';
+            iconClass = 'no-prescription-container';
+            
+            // Базовая иконка для безрецептурного отпуска
+            let svgContent = `
+                <svg viewBox="0 0 24 24" width="24" height="24" class="no-prescription-icon">
+                    <path d="M12 4v4m-2 4h4m-4 4v4m8-16v16M4 12h16"/>
+                </svg>
+            `;
+            
+            // Заменяем иконку в зависимости от формы препарата
+            if (isInjection) {
+                svgContent = `
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="injection-icon">
+                        <path d="M6 18L18 6m-9 9l3-3m-5-5l3-3m2 8l3-3m2 2l1-1m-5-5l3 3"/>
+                        <path d="M15 9L9 15"/>
+                    </svg>
+                `;
+                baseTitle = 'Инъекционный препарат';
+                iconClass = 'injection-container';
+            } else if (isTablet) {
+                svgContent = `
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="tablet-icon">
+                        <circle cx="12" cy="12" r="7"/>
+                        <path d="M12 9v6"/>
+                        <path d="M9 12h6"/>
+                    </svg>
+                `;
+                baseTitle = 'Таблетки (без рецепта)';
+                iconClass = 'tablet-container';
+            } else if (isLiquid) {
+                svgContent = `
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="liquid-icon">
+                        <path d="M12 2v6l-3 6v6a2 2 0 002 2h2a2 2 0 002-2v-6l-3-6V2"/>
+                        <path d="M10 14h4"/>
+                    </svg>
+                `;
+                baseTitle = 'Жидкая форма (без рецепта)';
+                iconClass = 'liquid-container';
+            } else if (isExternal) {
+                svgContent = `
+                    <svg viewBox="0 0 24 24" width="24" height="24" class="external-icon">
+                        <path d="M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        <path d="M12 7c2 0 4 1 4 3s-1 3-4 3-4-1-4-3 2-3 4-3z"/>
+                        <path d="M8 16h8"/>
+                    </svg>
+                `;
+                baseTitle = 'Наружное применение (без рецепта)';
+                iconClass = 'external-container';
+            }
+            
+            iconSpan.innerHTML = svgContent;
+            iconSpan.title = baseTitle;
+            iconSpan.classList.add(iconClass.replace('-container', '-icon-container'));
+        }
+        
+        // Добавляем класс для совместимости со старыми браузерами
+        container.classList.add(iconClass);
+        
+        // Создаем текстовый элемент
+        const textSpan = document.createElement('span');
+        textSpan.className = 'usage-text';
+        textSpan.textContent = usageText;
+        
+        container.appendChild(iconSpan);
+        container.appendChild(textSpan);
+        
+        return container;
     }
     
     // Функция для отображения модального окна сообщения об ошибке
@@ -1287,7 +1448,8 @@ function displayDrugInfo(drug, selectedCategories) {
         { 
             name: 'usage', 
             title: 'Условия отпуска', 
-            category: 'Условия отпуска' 
+            category: 'Условия отпуска',
+            customFormat: formatUsageWithIcon
         },
         { 
             name: 'protection_period', 
@@ -1312,7 +1474,20 @@ function displayDrugInfo(drug, selectedCategories) {
                 
                 const contentElement = document.createElement('div');
                 contentElement.className = 'drug-info-content';
-                contentElement.textContent = section.customFormat ? section.customFormat(value) : value;
+                
+                if (section.customFormat) {
+                    // Если есть функция форматирования, используем ее
+                    const formattedContent = section.customFormat(value);
+                    if (typeof formattedContent === 'string') {
+                        contentElement.textContent = formattedContent;
+                    } else if (formattedContent instanceof HTMLElement) {
+                        contentElement.appendChild(formattedContent);
+                    } else if (formattedContent instanceof DocumentFragment) {
+                        contentElement.appendChild(formattedContent);
+                    }
+                } else {
+                    contentElement.textContent = value;
+                }
                 
                 sectionElement.appendChild(titleElement);
                 sectionElement.appendChild(contentElement);
