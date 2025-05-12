@@ -832,7 +832,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     if (section.customFormat) {
                         // Если есть функция форматирования, используем ее
-                        const formattedContent = section.customFormat(value);
+                        let formattedContent;
+                        
+                        // Для условий отпуска передаем дополнительную информацию о препарате
+                        if (section.name === 'usage') {
+                            formattedContent = section.customFormat(value, drug);
+                        } else {
+                            formattedContent = section.customFormat(value);
+                        }
+                        
                         if (typeof formattedContent === 'string') {
                             contentElement.textContent = formattedContent;
                         } else if (formattedContent instanceof HTMLElement) {
@@ -864,7 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Функция для форматирования условий отпуска с иконкой
-    function formatUsageWithIcon(usageText) {
+    function formatUsageWithIcon(usageText, drugInfo) {
         if (!usageText) return '';
         
         const container = document.createElement('div');
@@ -883,7 +891,24 @@ document.addEventListener('DOMContentLoaded', () => {
         let isLiquid = textLower.includes('сироп') || textLower.includes('суспенз') || textLower.includes('раствор');
         let isExternal = textLower.includes('наружн') || textLower.includes('мазь') || textLower.includes('крем') || textLower.includes('гель');
         
-        if (textLower.includes('рецепт') || textLower.includes('рецептур')) {
+        // Определяем форму выпуска из информации о препарате, если текст не содержит явного указания
+        if (drugInfo) {
+            if (!isInjection && !isTablet && !isLiquid && !isExternal) {
+                const formType = drugInfo.form_type ? drugInfo.form_type.toLowerCase() : '';
+                
+                isInjection = formType.includes('укол') || formType.includes('инъекц') || formType.includes('шприц');
+                isTablet = formType.includes('таблет') || formType.includes('капсул');
+                isLiquid = formType.includes('сироп') || formType.includes('суспенз') || formType.includes('раствор') || 
+                           formType.includes('капли') || formType.includes('жидк');
+                isExternal = formType.includes('наружн') || formType.includes('мазь') || formType.includes('крем') || 
+                             formType.includes('гель') || formType.includes('местн');
+            }
+        }
+        
+        // Определяем, нужен ли рецепт более точно
+        const { isPrescription, reason } = analyzePrescriptionStatus(usageText, drugInfo);
+        
+        if (isPrescription) {
             baseTitle = 'Отпускается по рецепту';
             iconClass = 'prescription-container';
             
@@ -958,7 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <path d="M15 9L9 15"/>
                     </svg>
                 `;
-                baseTitle = 'Инъекционный препарат';
+                baseTitle = 'Инъекционный препарат (без рецепта)';
                 iconClass = 'injection-container';
             } else if (isTablet) {
                 svgContent = `
@@ -1004,12 +1029,93 @@ document.addEventListener('DOMContentLoaded', () => {
         textSpan.className = 'usage-text';
         textSpan.textContent = usageText;
         
+        // Для отладки добавим скрытый элемент с информацией о распознавании
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.is_bot) {
+            const debugInfo = document.createElement('div');
+            debugInfo.style.fontSize = '10px';
+            debugInfo.style.color = '#999';
+            debugInfo.style.marginTop = '4px';
+            debugInfo.innerHTML = `DEBUG: isPrescription=${isPrescription}, reason=${reason}`;
+            container.appendChild(debugInfo);
+        }
+        
         container.appendChild(iconSpan);
         container.appendChild(textSpan);
         
         return container;
     }
     
+    // Функция для анализа рецептурного статуса препарата
+    function analyzePrescriptionStatus(text, drugInfo) {
+        if (!text) return { isPrescription: false, reason: 'no_text' };
+        
+        const textLower = text.toLowerCase();
+        
+        // Явные указания на безрецептурный отпуск
+        const noPrescriptionPatterns = [
+            'без рецепта', 
+            'безрецептурный', 
+            'безрецептурн',
+            'отпускается без рецепта',
+            'без рецепта врача',
+            'отпуск без рецепта'
+        ];
+        
+        // Явные указания на рецептурный отпуск
+        const prescriptionPatterns = [
+            'по рецепту',
+            'рецептурный',
+            'по рецепту врача',
+            'отпускается по рецепту',
+            'только по рецепту'
+        ];
+        
+        // Используем информацию о типе препарата, если она доступна
+        if (drugInfo) {
+            // Проверяем, есть ли специальные маркеры рецептурного отпуска
+            if (drugInfo.is_prescription === true) {
+                return { isPrescription: true, reason: 'drug_info_prescription' };
+            }
+            
+            if (drugInfo.is_prescription === false) {
+                return { isPrescription: false, reason: 'drug_info_no_prescription' };
+            }
+            
+            // Проверяем название на наличие маркеров сильнодействующих препаратов
+            const drugName = drugInfo.name ? drugInfo.name.toLowerCase() : '';
+            const prescriptionNameMarkers = ['антибиотик', 'наркотическ', 'психотроп', 'кодеин'];
+            
+            for (const marker of prescriptionNameMarkers) {
+                if (drugName.includes(marker)) {
+                    return { isPrescription: true, reason: `prescription_name_marker: ${marker}` };
+                }
+            }
+        }
+        
+        // Проверяем сначала явные указания на безрецептурный отпуск
+        for (const pattern of noPrescriptionPatterns) {
+            if (textLower.includes(pattern)) {
+                return { isPrescription: false, reason: `explicit_no_prescription: ${pattern}` };
+            }
+        }
+        
+        // Затем проверяем явные указания на рецептурный отпуск
+        for (const pattern of prescriptionPatterns) {
+            if (textLower.includes(pattern)) {
+                return { isPrescription: true, reason: `explicit_prescription: ${pattern}` };
+            }
+        }
+        
+        // Если слово "рецепт" встречается в тексте, но нет явных указаний на безрецептурный
+        // отпуск, то считаем, что препарат рецептурный
+        if (textLower.includes('рецепт')) {
+            return { isPrescription: true, reason: 'implicit_prescription' };
+        }
+        
+        // По умолчанию считаем, что препарат безрецептурный
+        return { isPrescription: false, reason: 'default_no_prescription' };
+    }
+
     // Функция для отображения модального окна сообщения об ошибке
     async function reportError() {
         const errorModal = document.getElementById('errorModal');
@@ -1299,55 +1405,162 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function displayFilteredDrugs(filteredDrugs) {
-    const drugListElement = document.getElementById('drugList');
-    drugListElement.innerHTML = '';
+    const drugOptionsContainer = document.getElementById('drug-options');
+    drugOptionsContainer.innerHTML = '';
 
     if (filteredDrugs.length === 0) {
-        drugListElement.innerHTML = '<div class="no-results">Препараты не найдены</div>';
+        // Отображаем заглушку, если ничего не найдено
+        drugOptionsContainer.innerHTML = '<div class="no-results">Препараты не найдены</div>';
         return;
     }
 
-    const selectedCategories = getSelectedCategories();
+    // Добавляем счетчик результатов
+    const resultsCounter = document.createElement('div');
+    resultsCounter.className = 'results-counter';
+    resultsCounter.innerHTML = `Найдено: <span class="count">${filteredDrugs.length}</span> препаратов`;
+    
+    // Поместим счетчик перед контейнером с препаратами
+    const confirmationSection = document.getElementById('confirmation-section');
+    const confirmationTitle = confirmationSection.querySelector('.confirmation-title');
+    confirmationSection.insertBefore(resultsCounter, confirmationTitle.nextSibling);
 
-    filteredDrugs.forEach((drug, index) => {
+    // Создаем элемент для каждого найденного препарата
+    filteredDrugs.forEach(drug => {
         const drugItem = document.createElement('div');
         drugItem.className = 'drug-item';
-        drugItem.style.setProperty('--item-index', index); // Добавляем индекс для анимации
         
-        const drugName = document.createElement('div');
-        drugName.className = 'drug-name';
-        drugName.textContent = drug.name || 'Препарат без названия';
-        drugItem.appendChild(drugName);
-
-        if (drug.trade_names && drug.trade_names.trim()) {
-            const drugTradeNames = document.createElement('div');
-            drugTradeNames.className = 'drug-trade-names';
-            drugTradeNames.textContent = drug.trade_names;
-            drugItem.appendChild(drugTradeNames);
+        // Анализируем тип препарата и добавляем соответствующие классы
+        const drugTypes = analyzeDrugType(drug);
+        drugTypes.forEach(type => {
+            drugItem.classList.add(type);
+        });
+        
+        // Определяем иконку в зависимости от типа
+        let drugTypeIcon = '';
+        if (drugTypes.includes('injection')) {
+            drugTypeIcon = `<svg class="drug-type-icon injection-icon" viewBox="0 0 24 24" width="18" height="18">
+                <path d="M18 2l4 4-4.5 4.5-3-3L13 9l3 3-8 8-3-3 8-8-1.5-1.5-1.5 1.5-3-3L13 1.5z"/>
+                <path d="M3.59 13.41l7 7A2 2 0 0 0 15 17l-7-7a2 2 0 0 0-4.41 3.41z"/>
+            </svg>`;
+        } else if (drugTypes.includes('tablet')) {
+            drugTypeIcon = `<svg class="drug-type-icon tablet-icon" viewBox="0 0 24 24" width="18" height="18">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+                <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
+            </svg>`;
+        } else if (drugTypes.includes('liquid')) {
+            drugTypeIcon = `<svg class="drug-type-icon liquid-icon" viewBox="0 0 24 24" width="18" height="18">
+                <path d="M12,3c0,0-6,9-6,13c0,3.3,2.7,6,6,6s6-2.7,6-6C18,12,12,3,12,3z" />
+                <path d="M10 14 L14 14" stroke="white" stroke-width="1.5" />
+                <path d="M10 17 L14 17" stroke="white" stroke-width="1.5" />
+            </svg>`;
+        } else if (drugTypes.includes('external')) {
+            drugTypeIcon = `<svg class="drug-type-icon external-icon" viewBox="0 0 24 24" width="18" height="18">
+                <path d="M7,3h10c1.1,0,2,0.9,2,2v14c0,1.1-0.9,2-2,2H7c-1.1,0-2-0.9-2-2V5C5,3.9,5.9,3,7,3z" />
+                <path d="M7 8 L17 8" stroke="white" stroke-width="1.5" />
+                <path d="M7 12 L17 12" stroke="white" stroke-width="1.5" />
+                <path d="M7 16 L13 16" stroke="white" stroke-width="1.5" />
+            </svg>`;
         }
-
-        if (drug.atx_code && drug.atx_name) {
-            const drugClassification = document.createElement('div');
-            drugClassification.className = 'drug-classification';
-            drugClassification.textContent = `${drug.atx_code}: ${drug.atx_name}`;
-            drugItem.appendChild(drugClassification);
+        
+        // Определяем иконку в зависимости от рецептурного статуса
+        let prescriptionIcon = '';
+        if (drugTypes.includes('prescription')) {
+            prescriptionIcon = `<svg class="prescription-status-icon prescription-icon" viewBox="0 0 24 24" width="18" height="18">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+                <path d="M12 6a1 1 0 0 0-1 1v5a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V7a1 1 0 0 0-1-1z"/>
+            </svg>`;
+        } else {
+            prescriptionIcon = `<svg class="prescription-status-icon otc-icon" viewBox="0 0 24 24" width="18" height="18">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+                <path d="M12 6a1 1 0 0 0-1 1v4H7a1 1 0 0 0 0 2h4v4a1 1 0 0 0 2 0v-4h4a1 1 0 0 0 0-2h-4V7a1 1 0 0 0-1-1z"/>
+            </svg>`;
         }
+        
+        // Отображаем название препарата с иконками
+        drugItem.innerHTML = `
+            <div class="drug-item-header">
+                <div class="drug-icons">
+                    ${prescriptionIcon}
+                    ${drugTypeIcon}
+                </div>
+                <div class="drug-name">${drug.name || 'Препарат без названия'}</div>
+            </div>
+            <div class="drug-item-body">
+                <div class="drug-active-ingredients">${drug.active_ingredients ? (Array.isArray(drug.active_ingredients) ? drug.active_ingredients.join(', ') : drug.active_ingredients) : 'Нет данных о действующих веществах'}</div>
+            </div>
+        `;
 
+        // Добавляем обработчик событий для отображения полной информации
         drugItem.addEventListener('click', () => {
-            displayDrugInfo(drug, selectedCategories);
+            // Показываем полную информацию о препарате
+            displayDrugInfo(drug, getSelectedCategories());
         });
 
-        drugListElement.appendChild(drugItem);
+        // Добавляем элемент в контейнер
+        drugOptionsContainer.appendChild(drugItem);
     });
+
+    // Показываем секцию с результатами
+    document.getElementById('confirmation-section').style.display = 'block';
 }
 
+// Обновляем функцию displayDrugInfo для модального окна
 function displayDrugInfo(drug, selectedCategories) {
     const modal = document.getElementById('drugInfoModal');
     const modalTitle = document.getElementById('drugInfoTitle');
     const modalBody = document.getElementById('drugInfoContent');
     
-    modalTitle.textContent = drug.name || 'Препарат без названия';
+    // Анализируем тип препарата
+    const drugTypes = analyzeDrugType(drug);
+    
+    // Создаем заголовок с иконками типа препарата
+    let titleWithIcons = '';
+    
+    // Определяем иконку в зависимости от рецептурного статуса
+    if (drugTypes.includes('prescription')) {
+        titleWithIcons += `<svg class="prescription-status-icon prescription-icon modal-icon" viewBox="0 0 24 24" width="24" height="24">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+            <path d="M12 6a1 1 0 0 0-1 1v5a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V7a1 1 0 0 0-1-1z"/>
+        </svg>`;
+    } else {
+        titleWithIcons += `<svg class="prescription-status-icon otc-icon modal-icon" viewBox="0 0 24 24" width="24" height="24">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+            <path d="M12 6a1 1 0 0 0-1 1v4H7a1 1 0 0 0 0 2h4v4a1 1 0 0 0 2 0v-4h4a1 1 0 0 0 0-2h-4V7a1 1 0 0 0-1-1z"/>
+        </svg>`;
+    }
+    
+    // Добавляем иконку типа препарата
+    if (drugTypes.includes('injection')) {
+        titleWithIcons += `<svg class="drug-type-icon injection-icon modal-icon" viewBox="0 0 24 24" width="24" height="24">
+            <path d="M18 2l4 4-4.5 4.5-3-3L13 9l3 3-8 8-3-3 8-8-1.5-1.5-1.5 1.5-3-3L13 1.5z"/>
+            <path d="M3.59 13.41l7 7A2 2 0 0 0 15 17l-7-7a2 2 0 0 0-4.41 3.41z"/>
+        </svg>`;
+    } else if (drugTypes.includes('tablet')) {
+        titleWithIcons += `<svg class="drug-type-icon tablet-icon modal-icon" viewBox="0 0 24 24" width="24" height="24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none" />
+            <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
+        </svg>`;
+    } else if (drugTypes.includes('liquid')) {
+        titleWithIcons += `<svg class="drug-type-icon liquid-icon modal-icon" viewBox="0 0 24 24" width="24" height="24">
+            <path d="M12,3c0,0-6,9-6,13c0,3.3,2.7,6,6,6s6-2.7,6-6C18,12,12,3,12,3z" />
+            <path d="M10 14 L14 14" stroke="white" stroke-width="1.5" />
+            <path d="M10 17 L14 17" stroke="white" stroke-width="1.5" />
+        </svg>`;
+    } else if (drugTypes.includes('external')) {
+        titleWithIcons += `<svg class="drug-type-icon external-icon modal-icon" viewBox="0 0 24 24" width="24" height="24">
+            <path d="M7,3h10c1.1,0,2,0.9,2,2v14c0,1.1-0.9,2-2,2H7c-1.1,0-2-0.9-2-2V5C5,3.9,5.9,3,7,3z" />
+            <path d="M7 8 L17 8" stroke="white" stroke-width="1.5" />
+            <path d="M7 12 L17 12" stroke="white" stroke-width="1.5" />
+            <path d="M7 16 L13 16" stroke="white" stroke-width="1.5" />
+        </svg>`;
+    }
+    
+    titleWithIcons += `<span class="modal-title-text">${drug.name || 'Препарат без названия'}</span>`;
+    
+    modalTitle.innerHTML = titleWithIcons;
     modalBody.innerHTML = '';
+    
+    // Далее идет существующий код функции...
     
     // Адаптируем структуру препарата к отображению
     const adaptedDrug = adaptDrugData(drug);
@@ -1477,7 +1690,15 @@ function displayDrugInfo(drug, selectedCategories) {
                 
                 if (section.customFormat) {
                     // Если есть функция форматирования, используем ее
-                    const formattedContent = section.customFormat(value);
+                    let formattedContent;
+                    
+                    // Для условий отпуска передаем дополнительную информацию о препарате
+                    if (section.name === 'usage') {
+                        formattedContent = section.customFormat(value, drug);
+                    } else {
+                        formattedContent = section.customFormat(value);
+                    }
+                    
                     if (typeof formattedContent === 'string') {
                         contentElement.textContent = formattedContent;
                     } else if (formattedContent instanceof HTMLElement) {
@@ -1586,5 +1807,210 @@ function initApp() {
         window.displayFilteredDrugs = function(drugs) {
             console.log(`Отображение ${drugs ? drugs.length : 0} препаратов`);
         };
+    }
+
+    // Инициализируем фильтры типов препаратов
+    initMedicationFilters();
+}
+
+// Функция для анализа типа препарата и добавления соответствующих классов для фильтрации
+function analyzeDrugType(drug) {
+    let drugTypes = [];
+    const usageText = drug.usage || '';
+    const drugName = drug.name || '';
+    const formType = drug.form_type || '';
+    const composition = drug.composition || '';
+    const indications = drug.indications || '';
+    const contraindications = drug.contraindications || '';
+    const dosage = drug.dosage || '';
+    
+    // Определяем, является ли препарат рецептурным или безрецептурным
+    const isPrescription = analyzePrescriptionStatus(usageText, drug);
+    drugTypes.push(isPrescription ? 'prescription' : 'otc');
+    
+    // Проверяем, является ли препарат инъекционным
+    const isInjection = /\b(укол|инъекц|внутримышечн|внутривенн|парентерал|шприц)\b/i.test(usageText + ' ' + formType + ' ' + dosage);
+    if (isInjection) {
+        drugTypes.push('injection');
+    }
+    
+    // Проверяем, является ли препарат таблеткой или капсулой
+    const isTablet = /\b(таблет|капсул|драже|пилюл)\b/i.test(formType + ' ' + dosage);
+    if (isTablet) {
+        drugTypes.push('tablet');
+    }
+    
+    // Проверяем, является ли препарат жидкостью (сироп, раствор и т.д.)
+    const isLiquid = /\b(сироп|раствор|капл|суспенз|эмульс|настой|отвар|эликсир|микстур)\b/i.test(formType + ' ' + dosage);
+    if (isLiquid) {
+        drugTypes.push('liquid');
+    }
+    
+    // Проверяем, является ли препарат для наружного применения
+    const isExternal = /\b(мазь|крем|гель|паст|присып|примоч|наруж|местн|трансдерм|пластыр|втир|втер|накожн)\b/i.test(formType + ' ' + usageText + ' ' + dosage);
+    if (isExternal) {
+        drugTypes.push('external');
+    }
+    
+    return drugTypes;
+}
+
+// Функция для сохранения активного фильтра в локальное хранилище
+function saveActiveFilter(filterType) {
+    try {
+        localStorage.setItem('activeDrugFilter', filterType);
+    } catch (e) {
+        console.error('Ошибка при сохранении фильтра:', e);
+    }
+}
+
+// Функция для загрузки активного фильтра из локального хранилища
+function loadActiveFilter() {
+    try {
+        return localStorage.getItem('activeDrugFilter') || 'all';
+    } catch (e) {
+        console.error('Ошибка при загрузке фильтра:', e);
+        return 'all';
+    }
+}
+
+// Обновленная функция для инициализации фильтров типов препаратов
+function initMedicationFilters() {
+    const filterButtons = document.querySelectorAll('.filter-button');
+    
+    // Загружаем сохраненный фильтр
+    let activeFilter = loadActiveFilter();
+    
+    // Активируем сохраненный фильтр
+    filterButtons.forEach(button => {
+        if (button.getAttribute('data-filter') === activeFilter) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+        
+        button.addEventListener('click', function() {
+            const drugOptionsContainer = document.getElementById('drug-options');
+            const isResultsVisible = drugOptionsContainer.children.length > 0 && document.getElementById('confirmation-section').style.display !== 'none';
+            
+            // Удаляем класс active у всех кнопок
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Добавляем класс active к нажатой кнопке
+            this.classList.add('active');
+            
+            // Получаем значение фильтра
+            activeFilter = this.getAttribute('data-filter');
+            
+            // Сохраняем выбранный фильтр
+            saveActiveFilter(activeFilter);
+            
+            // Если результаты поиска еще не отображаются, делаем поиск по всем препаратам
+            if (!isResultsVisible) {
+                // Загружаем все препараты и фильтруем их
+                searchAllDrugs(activeFilter);
+            } else {
+                // Применяем фильтр к отображаемым препаратам
+                applyMedicationFilter(activeFilter);
+            }
+        });
+    });
+}
+
+// Функция для плавного скролла к элементу
+function smoothScrollTo(element) {
+    if (!element) return;
+    
+    const rect = element.getBoundingClientRect();
+    const isVisible = (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+    
+    if (!isVisible) {
+        element.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
+}
+
+// Обновленная функция для применения фильтра к списку препаратов
+function applyMedicationFilter(filterType) {
+    const drugItems = document.querySelectorAll('.drug-item');
+    let visibleCount = 0;
+    
+    drugItems.forEach(item => {
+        if (filterType === 'all') {
+            item.style.display = 'block';
+            visibleCount++;
+        } else {
+            // Проверяем, содержит ли препарат нужный тип
+            if (item.classList.contains(filterType)) {
+                item.style.display = 'block';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        }
+    });
+    
+    // Обновляем счетчик результатов
+    const resultsCounter = document.querySelector('.results-counter');
+    if (resultsCounter) {
+        resultsCounter.innerHTML = `Найдено: <span class="count">${visibleCount}</span> препаратов`;
+    }
+    
+    // Плавно прокручиваем к началу списка
+    const drugOptionsContainer = document.getElementById('drug-options');
+    if (drugOptionsContainer) {
+        smoothScrollTo(drugOptionsContainer.parentElement);
+    }
+}
+
+// Функция для поиска всех препаратов и фильтрации по типу
+async function searchAllDrugs(filterType) {
+    try {
+        // Показываем индикатор загрузки
+        document.getElementById('loading').style.display = 'block';
+        
+        // Получаем данные о препаратах
+        await loadDrugsData();
+        
+        // Берем все препараты
+        const allDrugs = window.drugsData || [];
+        
+        if (allDrugs.length === 0) {
+            throw new Error('Не удалось загрузить данные о препаратах');
+        }
+        
+        // Отсортируем препараты по алфавиту
+        const sortedDrugs = [...allDrugs].sort((a, b) => {
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
+        
+        // Отображаем результаты
+        displayFilteredDrugs(sortedDrugs);
+        
+        // Скрываем индикатор загрузки
+        document.getElementById('loading').style.display = 'none';
+        
+        // Показываем кнопку "Назад"
+        showBackButton();
+        
+        // Применяем фильтр
+        if (filterType !== 'all') {
+            applyMedicationFilter(filterType);
+        }
+        
+    } catch (error) {
+        console.error('Ошибка при поиске всех препаратов:', error);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').textContent = 'Ошибка при загрузке данных. Пожалуйста, попробуйте позже.';
+        document.getElementById('error').style.display = 'block';
     }
 }
