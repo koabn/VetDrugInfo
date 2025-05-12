@@ -546,16 +546,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Добавляем обработчики для модального окна
-    document.getElementById('cancelErrorReport').addEventListener('click', closeErrorModal);
-    document.getElementById('sendErrorReport').addEventListener('click', sendErrorReport);
-    document.getElementById('errorModal').addEventListener('click', (e) => {
+    const errorModalCloseBtn = document.querySelector('#errorModal .close-modal');
+    errorModalCloseBtn?.addEventListener('click', closeErrorModal);
+    
+    const errorSubmitBtn = document.querySelector('#errorModal .form-submit');
+    errorSubmitBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        sendErrorReport();
+    });
+    
+    document.getElementById('errorModal')?.addEventListener('click', (e) => {
         if (e.target.id === 'errorModal') {
             closeErrorModal();
         }
     });
 
     // Добавляем обработчик отправки формы
-    document.getElementById('errorForm').addEventListener('submit', (e) => {
+    document.getElementById('errorForm')?.addEventListener('submit', (e) => {
         e.preventDefault();
         sendErrorReport();
     });
