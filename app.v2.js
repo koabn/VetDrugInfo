@@ -153,8 +153,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function startSearch() {
         const query = searchInput.value.trim().toLowerCase();
         if (query.length >= 2) {
+            console.log('Начинаем поиск по запросу:', query);
             searchDrugs(query);
             showBackButton();
+            
+            // Показываем блок результатов поиска
+            const resultsSection = document.getElementById('results');
+            if (resultsSection) {
+                resultsSection.style.display = 'block';
+                setTimeout(() => {
+                    resultsSection.classList.add('visible');
+                }, 10);
+            }
         } else {
             errorDiv.textContent = 'Введите минимум 2 символа для поиска';
             errorDiv.style.display = 'block';
@@ -219,6 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        console.log(`Выполняется поиск по запросу "${query}"`);
+        
         const threshold = 0.7; // Порог схожести для нечеткого поиска
         query = query.toLowerCase();
         
@@ -255,6 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
             
             return nameSimilarity >= threshold;
         });
+        
+        console.log(`Найдено ${drugResults.length} препаратов`);
         
         // Сортируем результаты по релевантности
         drugResults.sort((a, b) => {
@@ -362,13 +376,27 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Обработчик клика
             option.addEventListener('click', () => {
+                console.log('Выбран препарат:', drug.name);
                 currentDrug = drug;
                 const selectedCategories = getSelectedCategories();
                 confirmationSection.style.display = 'none';
+                
+                // Показываем секцию результатов если она скрыта
+                const resultsSection = document.getElementById('results');
+                if (resultsSection && resultsSection.style.display === 'none') {
+                    resultsSection.style.display = 'block';
+                    setTimeout(() => {
+                        resultsSection.classList.add('visible');
+                    }, 10);
+                }
+                
                 displayFilteredDrugInfo(drug);
                 
                 // Добавляем отступ сверху для элемента drug-info
                 drugInfo.style.marginTop = '20px';
+                
+                // Прокручиваем страницу к информации о препарате
+                drugInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
             
             drugOptions.appendChild(option);
@@ -390,8 +418,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        console.log('Отображение информации о препарате:', drug.name);
+        
         // Показываем блок информации о препарате
         drugInfo.style.display = 'block';
+        const resultsSection = document.getElementById('results');
+        if (resultsSection) {
+            resultsSection.style.display = 'block';
+            setTimeout(() => {
+                resultsSection.classList.add('visible');
+            }, 10);
+        }
         drugContent.innerHTML = '';
         
         // Заголовок с названием препарата
@@ -678,6 +715,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // При вводе поиск не выполняется автоматически
+        // Комментируем код автоматического поиска
+        /*
         // Устанавливаем таймаут для предотвращения частых запросов
         searchTimeout = setTimeout(() => {
             // Используем локальные данные вместо запроса к API
@@ -714,6 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 drugOptions.style.display = 'none';
             }
         }, 300); // Задержка в 300 мс
+        */
     });
 
     // Скрытие предложений при клике вне блока
