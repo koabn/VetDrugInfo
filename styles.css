@@ -1274,7 +1274,7 @@ html {
 /* Новые стили из версии v2 */
 
 /* Общий контейнер для списка препаратов */
-#drugOptions {
+#drug-options {
     margin-top: 15px;
     max-height: 500px;
     overflow-y: auto;
