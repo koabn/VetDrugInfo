@@ -736,7 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Получаем выбранные категории
         const selectedCategories = getSelectedCategories();
         
-        // Основная информация о препарате
+        // Определяем порядок и категории разделов информации
         const sections = [
             // Активные вещества (с особой обработкой для массива)
             {
@@ -762,10 +762,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: 'contraindications',
                 title: 'Противопоказания',
                 category: 'Противопоказания'
+            },
+            // Способ применения и дозы
+            {
+                name: 'dosage',
+                title: 'Способ применения и дозы',
+                category: 'Дозировка'
+            },
+            // Побочные эффекты
+            {
+                name: 'side_effects',
+                title: 'Побочные эффекты',
+                category: 'Побочные эффекты'
+            },
+            // Состав
+            {
+                name: 'composition',
+                title: 'Состав',
+                category: 'Состав'
+            },
+            // Условия хранения
+            {
+                name: 'storage',
+                title: 'Условия хранения',
+                category: 'Хранение'
+            },
+            // Срок годности
+            {
+                name: 'shelf_life',
+                title: 'Срок годности',
+                category: 'Хранение'
+            },
+            // Условия отпуска
+            {
+                name: 'usage',
+                title: 'Условия отпуска',
+                category: 'Условия отпуска'
+            },
+            // Производитель
+            {
+                name: 'producer',
+                title: 'Производитель',
+                category: 'Регистрационная информация'
+            },
+            // Страна производства
+            {
+                name: 'producer_country',
+                title: 'Страна производства',
+                category: 'Регистрационная информация'
             }
         ];
         
-        // Отображаем выбранные разделы
+        // Отображаем выбранные разделы или все, если категории не выбраны
         sections.forEach(section => {
             if (selectedCategories.length === 0 || selectedCategories.includes(section.category)) {
                 const value = adaptedDrug[section.name];
@@ -804,6 +852,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Функция для отображения модального окна сообщения об ошибке
     async function reportError() {
         const errorModal = document.getElementById('errorModal');
+        
+        // Устанавливаем имя текущего препарата
+        if (currentDrug && currentDrug.name) {
+            const errorDrugNameElement = document.getElementById('errorDrugName');
+            if (errorDrugNameElement) {
+                errorDrugNameElement.textContent = currentDrug.name;
+            }
+        }
+        
         errorModal.style.display = 'flex';
         setTimeout(() => {
             errorModal.classList.add('visible');
@@ -1144,7 +1201,7 @@ function displayDrugInfo(drug, selectedCategories) {
         },
         { 
             name: 'trade_names', 
-            title: 'Международное непатентованное название', 
+            title: 'Торговые наименования', 
             category: 'Фармакотерапевтическая группа' 
         },
         { 
@@ -1273,8 +1330,10 @@ function displayDrugInfo(drug, selectedCategories) {
     reportButton.className = 'btn';
     reportButton.textContent = 'Сообщить об ошибке';
     reportButton.onclick = () => {
-        const drugName = drug.name || 'Без названия';
-        window.Telegram.WebApp.openTelegramLink(`https://t.me/vetaptekibot?start=report_${encodeURIComponent(drugName)}`);
+        // Открываем окно сообщения об ошибке
+        reportError();
+        // Закрываем модальное окно с информацией
+        modal.style.display = 'none';
     };
     
     reportButtonContainer.appendChild(reportButton);
@@ -1299,6 +1358,8 @@ function displayDrugInfo(drug, selectedCategories) {
 
 // Функция для адаптации структуры препарата
 function adaptDrugData(drug) {
+    if (!drug) return {};
+    
     const adaptedDrug = { ...drug };
     
     // Извлекаем данные из вложенного объекта manufacturer_info
@@ -1307,6 +1368,11 @@ function adaptDrugData(drug) {
         adaptedDrug.producer_country = drug.manufacturer_info.manufacturer_country;
         adaptedDrug.registration_holder = drug.manufacturer_info.registration_holder;
         adaptedDrug.registration_holder_country = drug.manufacturer_info.registration_holder_country;
+    }
+    
+    // Преобразуем активные ингредиенты в строку, если это массив
+    if (Array.isArray(drug.active_ingredients)) {
+        adaptedDrug.active_ingredients = drug.active_ingredients;
     }
     
     return adaptedDrug;
