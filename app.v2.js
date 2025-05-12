@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tg.setHeaderColor('secondary_bg_color');
     tg.MainButton.hide();
     
-    // Определяем базовый URL для API (не используется, так как используем локальные данные)
-    const USE_LOCAL_DATA = true;
+    // Определяем базовый URL для API
+    const API_BASE_URL = 'https://koabn.github.io/api';
     
     // Получаем элементы интерфейса
     const searchInput = document.getElementById('searchInput');
@@ -62,9 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
             errorDiv.style.display = 'none';
             loadingDiv.style.display = 'block';
             
+            console.log('URL для drugs:', `${API_BASE_URL}/drugs.json`);
             // Загружаем локальные данные
-            console.log('Попытка загрузки файла api/drugs.json');
-            const drugsResponse = await fetch('api/drugs.json');
+            const drugsResponse = await fetch(`${API_BASE_URL}/drugs.json`);
             
             if (!drugsResponse.ok) {
                 console.error('Ошибка HTTP при загрузке данных:', drugsResponse.status, drugsResponse.statusText);
@@ -678,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Устанавливаем таймаут для предотвращения частых поисков
+        // Устанавливаем таймаут для предотвращения частых запросов
         searchTimeout = setTimeout(() => {
             // Используем локальные данные вместо запроса к API
             if (drugsData && drugsData.length > 0) {
