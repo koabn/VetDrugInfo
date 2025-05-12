@@ -154,17 +154,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const query = searchInput.value.trim().toLowerCase();
         if (query.length >= 2) {
             console.log('Начинаем поиск по запросу:', query);
-            searchDrugs(query);
-            showBackButton();
             
             // Показываем блок результатов поиска
             const resultsSection = document.getElementById('results');
             if (resultsSection) {
+                console.log('Элемент results найден, устанавливаем его видимость');
                 resultsSection.style.display = 'block';
                 setTimeout(() => {
                     resultsSection.classList.add('visible');
                 }, 10);
+                
+                // Проверяем видимость и стили элемента results
+                ensureVisibility(resultsSection, 'resultsSection');
+            } else {
+                console.error('Элемент с id "results" не найден в DOM');
+                
+                // Проверим все элементы с классом results-section
+                const resultsSectionByClass = document.querySelector('.results-section');
+                if (resultsSectionByClass) {
+                    console.log('Найден элемент с классом results-section, используем его');
+                    resultsSectionByClass.style.display = 'block';
+                    setTimeout(() => {
+                        resultsSectionByClass.classList.add('visible');
+                    }, 10);
+                    
+                    // Проверяем видимость и стили элемента
+                    ensureVisibility(resultsSectionByClass, 'resultsSectionByClass');
+                } else {
+                    console.error('Элемент с классом results-section также не найден');
+                    
+                    // Выведем список всех секций на странице для диагностики
+                    const allSections = document.querySelectorAll('section, div[class*="section"], div[class*="results"]');
+                    console.log('Доступные секции на странице:', Array.from(allSections).map(el => ({ 
+                        id: el.id, 
+                        class: el.className, 
+                        display: window.getComputedStyle(el).display 
+                    })));
+                }
             }
+            
+            // Запускаем поиск
+            searchDrugs(query);
+            showBackButton();
         } else {
             errorDiv.textContent = 'Введите минимум 2 символа для поиска';
             errorDiv.style.display = 'block';
@@ -286,22 +317,117 @@ document.addEventListener('DOMContentLoaded', () => {
             return aName.length - bName.length;
         });
         
+        // Сбрасываем предыдущее состояние интерфейса
         errorDiv.style.display = 'none';
-        confirmationSection.style.display = 'none';
-        drugInfo.style.display = 'none';
+        
+        // Удаляем старый запасной блок, если он был
+        const oldFallback = document.getElementById('fallback-results');
+        if (oldFallback) {
+            oldFallback.style.display = 'none';
+        }
         
         // Если найдено более одного препарата, показываем список выбора
         if (drugResults.length > 1) {
-            showDrugOptions(drugResults);
+            console.log('Показываем список препаратов');
+            drugInfo.style.display = 'none';
+            
+            // Пробуем показать результаты в основном блоке
+            let displaySuccess = false;
+            
+            try {
+                confirmationSection.style.display = 'block';
+                ensureVisibility(confirmationSection, 'confirmationSection');
+                ensureVisibility(drugOptions, 'drugOptions');
+                showDrugOptions(drugResults);
+                
+                // Проверяем, видны ли элементы после отображения
+                const confirmStyle = window.getComputedStyle(confirmationSection);
+                const optionsStyle = window.getComputedStyle(drugOptions);
+                
+                if (confirmStyle.display !== 'none' && optionsStyle.display !== 'none' &&
+                    drugOptions.children.length > 0) {
+                    displaySuccess = true;
+                    console.log('Успешно отобразили результаты в основном блоке');
+                }
+            } catch (error) {
+                console.error('Ошибка при отображении результатов в основном блоке:', error);
+            }
+            
+            // Если не удалось отобразить в основном блоке, используем запасной вариант
+            if (!displaySuccess) {
+                console.log('Используем запасной вариант отображения результатов');
+                const fallbackResults = createFallbackResults();
+                fallbackResults.style.display = 'block';
+                
+                // Очищаем и заполняем запасной список
+                const fallbackList = document.getElementById('fallback-drug-list');
+                if (fallbackList) {
+                    fallbackList.innerHTML = '';
+                    
+                    // Заголовок с количеством найденных препаратов
+                    const resultHeader = document.createElement('div');
+                    resultHeader.style.marginBottom = '15px';
+                    resultHeader.style.fontWeight = 'bold';
+                    resultHeader.textContent = `Найдено ${drugResults.length} препаратов по запросу "${query}"`;
+                    fallbackList.appendChild(resultHeader);
+                    
+                    // Добавляем препараты в список
+                    drugResults.slice(0, 20).forEach((drug, index) => {
+                        const drugItem = document.createElement('div');
+                        drugItem.style.padding = '10px';
+                        drugItem.style.margin = '5px 0';
+                        drugItem.style.backgroundColor = '#f5f5f5';
+                        drugItem.style.borderRadius = '5px';
+                        drugItem.style.cursor = 'pointer';
+                        
+                        const drugName = document.createElement('div');
+                        drugName.style.fontWeight = 'bold';
+                        drugName.textContent = drug.name || 'Препарат без названия';
+                        drugItem.appendChild(drugName);
+                        
+                        if (drug.active_ingredients && drug.active_ingredients.length > 0) {
+                            const ingredients = document.createElement('div');
+                            ingredients.style.fontSize = '0.9em';
+                            ingredients.style.color = '#666';
+                            ingredients.textContent = `Действующие вещества: ${drug.active_ingredients.join(', ')}`;
+                            drugItem.appendChild(ingredients);
+                        }
+                        
+                        // Обработчик клика на препарат
+                        drugItem.addEventListener('click', () => {
+                            console.log('Выбран препарат из запасного списка:', drug.name);
+                            currentDrug = drug;
+                            displayFilteredDrugInfo(drug);
+                        });
+                        
+                        fallbackList.appendChild(drugItem);
+                    });
+                    
+                    // Сообщение о количестве показанных результатов
+                    if (drugResults.length > 20) {
+                        const moreInfo = document.createElement('div');
+                        moreInfo.style.fontStyle = 'italic';
+                        moreInfo.style.color = '#666';
+                        moreInfo.style.marginTop = '10px';
+                        moreInfo.textContent = `Показаны первые 20 результатов из ${drugResults.length}. Уточните запрос для более точных результатов.`;
+                        fallbackList.appendChild(moreInfo);
+                    }
+                }
+            }
         } 
         // Если найден ровно один препарат, показываем информацию о нем
         else if (drugResults.length === 1) {
+            console.log('Найден один препарат, показываем информацию');
             currentDrug = drugResults[0];
             const selectedCategories = getSelectedCategories();
+            confirmationSection.style.display = 'none';
             displayFilteredDrugInfo(currentDrug);
         } 
         // Если ничего не найдено, показываем сообщение об ошибке
         else {
+            console.log('Препараты не найдены');
+            confirmationSection.style.display = 'none';
+            drugInfo.style.display = 'none';
             errorDiv.textContent = 'Препараты не найдены. Попробуйте изменить запрос.';
             errorDiv.style.display = 'block';
         }
@@ -332,19 +458,91 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Функция отображения списка найденных препаратов
+    // Функция для создания запасного блока результатов
+    function createFallbackResults() {
+        console.log('Создаем запасной блок результатов');
+        
+        // Проверяем, нет ли уже созданного запасного блока
+        if (document.getElementById('fallback-results')) {
+            return document.getElementById('fallback-results');
+        }
+        
+        // Создаем блок
+        const fallbackResults = document.createElement('div');
+        fallbackResults.id = 'fallback-results';
+        fallbackResults.style.marginTop = '20px';
+        fallbackResults.style.padding = '15px';
+        fallbackResults.style.border = '1px solid #ddd';
+        fallbackResults.style.borderRadius = '8px';
+        fallbackResults.style.backgroundColor = '#f9f9f9';
+        
+        // Заголовок
+        const fallbackHeader = document.createElement('h3');
+        fallbackHeader.textContent = 'Результаты поиска';
+        fallbackHeader.style.marginTop = '0';
+        fallbackResults.appendChild(fallbackHeader);
+        
+        // Контейнер для списка препаратов
+        const fallbackList = document.createElement('div');
+        fallbackList.id = 'fallback-drug-list';
+        fallbackResults.appendChild(fallbackList);
+        
+        // Добавляем в DOM после поля поиска
+        const searchSection = document.querySelector('.search-section');
+        if (searchSection) {
+            searchSection.after(fallbackResults);
+        } else {
+            // Если не нашли секцию поиска, добавляем в body
+            document.body.appendChild(fallbackResults);
+        }
+        
+        return fallbackResults;
+    }
+
+    // Обновленная функция для показа списка найденных препаратов
     function showDrugOptions(results) {
+        console.log('Отображение списка найденных препаратов:', results.length);
+        
+        // Проверяем наличие контейнеров для отображения
+        if (!confirmationSection) {
+            console.error('Элемент confirmationSection не найден в DOM');
+            return;
+        }
+        
+        if (!drugOptions) {
+            console.error('Элемент drugOptions не найден в DOM');
+            return;
+        }
+        
         // Показываем блок выбора препаратов
         confirmationSection.style.display = 'block';
         drugOptions.innerHTML = '';
+        drugOptions.style.display = 'block'; // Убедимся, что сам список виден
+        
+        // Добавим заголовок для ясности
+        const headerText = document.createElement('div');
+        headerText.className = 'confirmation-header';
+        headerText.style.marginBottom = '10px';
+        headerText.style.fontWeight = 'bold';
+        headerText.textContent = `Найдено ${results.length} препаратов. Выберите один из списка:`;
+        drugOptions.appendChild(headerText);
         
         // Создаем список препаратов
-        results.slice(0, 20).forEach(drug => { // Ограничиваем 20 результатами
+        results.slice(0, 20).forEach((drug, index) => { // Ограничиваем 20 результатами
+            console.log(`Препарат ${index + 1}:`, drug.name);
+            
             const option = document.createElement('div');
             option.className = 'drug-option';
+            option.style.cursor = 'pointer';
+            option.style.padding = '10px';
+            option.style.margin = '5px 0';
+            option.style.border = '1px solid #e0e0e0';
+            option.style.borderRadius = '5px';
+            option.style.backgroundColor = '#f5f5f5';
             
             const optionName = document.createElement('div');
             optionName.className = 'drug-option-name';
+            optionName.style.fontWeight = 'bold';
             optionName.textContent = drug.name || 'Препарат без названия';
             option.appendChild(optionName);
             
@@ -370,9 +568,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (addInfo.length > 0) {
                 const optionDetails = document.createElement('div');
                 optionDetails.className = 'drug-option-details';
+                optionDetails.style.color = '#666';
+                optionDetails.style.fontSize = '0.9em';
+                optionDetails.style.marginTop = '5px';
                 optionDetails.innerHTML = addInfo.join('<br>');
                 option.appendChild(optionDetails);
             }
+            
+            // Эффект наведения
+            option.addEventListener('mouseover', () => {
+                option.style.backgroundColor = '#e0e0e0';
+            });
+            
+            option.addEventListener('mouseout', () => {
+                option.style.backgroundColor = '#f5f5f5';
+            });
             
             // Обработчик клика
             option.addEventListener('click', () => {
@@ -383,7 +593,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Показываем секцию результатов если она скрыта
                 const resultsSection = document.getElementById('results');
-                if (resultsSection && resultsSection.style.display === 'none') {
+                if (resultsSection) {
                     resultsSection.style.display = 'block';
                     setTimeout(() => {
                         resultsSection.classList.add('visible');
@@ -406,9 +616,24 @@ document.addEventListener('DOMContentLoaded', () => {
         if (results.length > 20) {
             const moreResults = document.createElement('div');
             moreResults.className = 'more-results';
+            moreResults.style.padding = '10px';
+            moreResults.style.color = '#666';
+            moreResults.style.fontStyle = 'italic';
             moreResults.textContent = `Показаны первые 20 результатов из ${results.length}. Уточните запрос для более точных результатов.`;
             drugOptions.appendChild(moreResults);
         }
+        
+        // Убедимся, что элемент confirmationSection виден
+        confirmationSection.style.opacity = '1';
+        confirmationSection.style.visibility = 'visible';
+        confirmationSection.style.height = 'auto';
+        confirmationSection.style.overflow = 'visible';
+        
+        // Применяем функцию проверки видимости
+        ensureVisibility(confirmationSection, 'confirmationSection в showDrugOptions');
+        ensureVisibility(drugOptions, 'drugOptions в showDrugOptions');
+        
+        console.log('Отображение списка препаратов завершено');
     }
     
     // Функция отображения отфильтрованной информации о препарате
@@ -613,6 +838,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Загружаем данные при инициализации
     loadDrugsData();
+
+    // Вспомогательная функция для проверки видимости элементов
+    function ensureVisibility(element, message = '') {
+        if (!element) return;
+        
+        // Проверяем текущие стили элемента
+        const computedStyle = window.getComputedStyle(element);
+        console.log(`${message} Стили элемента:`, {
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            opacity: computedStyle.opacity,
+            height: computedStyle.height
+        });
+        
+        // Исправляем потенциальные проблемы с видимостью
+        if (computedStyle.display === 'none') {
+            console.log(`${message} Исправляем display: none`);
+            element.style.display = 'block';
+        }
+        
+        if (computedStyle.visibility === 'hidden') {
+            console.log(`${message} Исправляем visibility: hidden`);
+            element.style.visibility = 'visible';
+        }
+        
+        if (parseFloat(computedStyle.opacity) === 0) {
+            console.log(`${message} Исправляем opacity: 0`);
+            element.style.opacity = '1';
+        }
+        
+        if (computedStyle.height === '0px') {
+            console.log(`${message} Исправляем height: 0px`);
+            element.style.height = 'auto';
+        }
+    }
 
     function showBackButton() {
         const backButton = document.getElementById('backButton');
