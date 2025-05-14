@@ -65,12 +65,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Загружаем обе базы данных
             console.log('URL для drugs:', `${API_BASE_URL}/drugs.json`);
-            console.log('URL для newdrugs:', `${API_BASE_URL}/combined/newdrugs.json`);
+            console.log('URL для newdrugs:', `${API_BASE_URL}/combined/Newdrugs.json`);
             
             // Загружаем локальные данные (старая и новая базы параллельно)
             const [drugsResponse, newdrugsResponse] = await Promise.all([
                 fetch(`${API_BASE_URL}/drugs.json`),
-                fetch(`${API_BASE_URL}/combined/newdrugs.json`)
+                fetch(`${API_BASE_URL}/combined/Newdrugs.json`)
             ]);
             
             // Проверяем ответ по старой базе
