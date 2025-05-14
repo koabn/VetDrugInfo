@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let currentDrug = null;
     let drugsData = null;
+    let newdrugsData = null; // Новая основная база данных (ранее vetlekData)
     
     // Настраиваем тему в зависимости от темы Telegram
     function setThemeColors() {
@@ -62,38 +63,70 @@ document.addEventListener('DOMContentLoaded', () => {
             errorDiv.style.display = 'none';
             loadingDiv.style.display = 'block';
             
+            // Загружаем обе базы данных
             console.log('URL для drugs:', `${API_BASE_URL}/drugs.json`);
-            // Загружаем локальные данные
-            const drugsResponse = await fetch(`${API_BASE_URL}/drugs.json`);
+            console.log('URL для newdrugs:', `${API_BASE_URL}/combined/newdrugs.json`);
             
+            // Загружаем локальные данные (старая и новая базы параллельно)
+            const [drugsResponse, newdrugsResponse] = await Promise.all([
+                fetch(`${API_BASE_URL}/drugs.json`),
+                fetch(`${API_BASE_URL}/combined/newdrugs.json`)
+            ]);
+            
+            // Проверяем ответ по старой базе
             if (!drugsResponse.ok) {
-                console.error('Ошибка HTTP при загрузке данных:', drugsResponse.status, drugsResponse.statusText);
-                throw new Error(`Ошибка при загрузке данных: HTTP ${drugsResponse.status} ${drugsResponse.statusText}`);
+                console.error('Ошибка HTTP при загрузке старой базы данных:', drugsResponse.status, drugsResponse.statusText);
+                throw new Error(`Ошибка при загрузке старой базы данных: HTTP ${drugsResponse.status} ${drugsResponse.statusText}`);
             }
             
-            console.log('Файл получен, начинаем парсинг JSON...');
+            // Проверяем ответ по новой базе
+            if (!newdrugsResponse.ok) {
+                console.error('Ошибка HTTP при загрузке новой базы данных:', newdrugsResponse.status, newdrugsResponse.statusText);
+                throw new Error(`Ошибка при загрузке новой базы данных: HTTP ${newdrugsResponse.status} ${newdrugsResponse.statusText}`);
+            }
+            
+            console.log('Файлы получены, начинаем парсинг JSON...');
+            
+            // Парсим ответы в JSON
             const drugsJson = await drugsResponse.json();
+            const newdrugsJson = await newdrugsResponse.json();
+            
             console.log('Данные препаратов загружены успешно');
             
-            // Проверяем структуру данных
+            // Проверяем структуру данных старой базы
             if (Array.isArray(drugsJson)) {
                 drugsData = drugsJson;
-                console.log('Данные в формате массива');
+                console.log('Старая база в формате массива');
             } else if (drugsJson && drugsJson.results) {
                 drugsData = drugsJson.results;
-                console.log('Данные в формате {results: [...]}');
+                console.log('Старая база в формате {results: [...]}');
             } else {
-                console.error('Неверный формат данных:', typeof drugsJson, drugsJson ? Object.keys(drugsJson) : 'null');
-                throw new Error('Неверный формат данных препаратов');
+                console.error('Неверный формат старой базы данных:', typeof drugsJson, drugsJson ? Object.keys(drugsJson) : 'null');
+                throw new Error('Неверный формат старой базы данных препаратов');
+            }
+            
+            // Проверяем структуру данных новой базы
+            if (Array.isArray(newdrugsJson)) {
+                newdrugsData = newdrugsJson;
+                console.log('Новая база в формате массива');
+            } else if (newdrugsJson && newdrugsJson.results) {
+                newdrugsData = newdrugsJson.results;
+                console.log('Новая база в формате {results: [...]}');
+            } else {
+                console.error('Неверный формат новой базы данных:', typeof newdrugsJson, newdrugsJson ? Object.keys(newdrugsJson) : 'null');
+                throw new Error('Неверный формат новой базы данных препаратов');
             }
             
             console.log('Данные успешно загружены');
-            console.log('Количество препаратов:', drugsData.length);
+            console.log('Количество препаратов в старой базе:', drugsData.length);
+            console.log('Количество препаратов в новой базе:', newdrugsData.length);
+            
             loadingDiv.style.display = 'none';
             
             // Отображаем сообщение об успешной загрузке
-            if (drugsData.length > 0) {
-                searchInput.placeholder = `Поиск среди ${drugsData.length} препаратов...`;
+            const totalDrugs = drugsData.length + newdrugsData.length;
+            if (totalDrugs > 0) {
+                searchInput.placeholder = `Поиск среди ${totalDrugs} препаратов...`;
             }
             
         } catch (error) {
@@ -252,9 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return 1 - distance / maxLength;
     }
 
-    // Функция поиска препаратов с поддержкой новой структуры
+    // Оптимизация функции поиска для улучшения отображения данных из обоих источников
     function searchDrugs(query) {
-        if (!drugsData) {
+        if (!drugsData || !newdrugsData) {
             errorDiv.textContent = 'Данные еще не загружены';
             errorDiv.style.display = 'block';
             return;
@@ -265,63 +298,115 @@ document.addEventListener('DOMContentLoaded', () => {
         const threshold = 0.7; // Порог схожести для нечеткого поиска
         query = query.toLowerCase();
         
-        // Поиск по препаратам с учетом схожести
-        const drugResults = drugsData.filter(drug => {
-            // Проверяем, что поля существуют перед поиском
-            const hasName = drug.name && typeof drug.name === 'string';
-            const hasTradeName = drug.trade_names && typeof drug.trade_names === 'string';
-            const hasActiveIngredients = drug.active_ingredients && Array.isArray(drug.active_ingredients);
-            
-            // Если нет нужных полей для поиска, пропускаем
-            if (!hasName && !hasTradeName && !hasActiveIngredients) return false;
-            
-            // Точное совпадение
-            const nameMatch = hasName && drug.name.toLowerCase().includes(query);
-            const tradeMatch = hasTradeName && drug.trade_names.toLowerCase().includes(query);
-            
-            // Поиск по активным веществам
-            let activeIngredientsMatch = false;
-            if (hasActiveIngredients) {
-                activeIngredientsMatch = drug.active_ingredients.some(ingredient => 
-                    ingredient.toLowerCase().includes(query)
-                );
-            }
-            
-            if (nameMatch || tradeMatch || activeIngredientsMatch) return true;
-            
-            // Нечеткий поиск
-            const nameSimilarity = hasName ? Math.max(
-                ...drug.name.toLowerCase().split(/\s+/).map(word => 
-                    stringSimilarity(word, query)
-                )
-            ) : 0;
-            
-            return nameSimilarity >= threshold;
+        // Вспомогательная функция для поиска в массиве препаратов
+        function searchInData(data, isNewdrugsSource = false) {
+            return data.filter(drug => {
+                // Проверяем, что поля существуют перед поиском
+                const hasName = drug.name && typeof drug.name === 'string';
+                const hasTradeName = drug.trade_names && typeof drug.trade_names === 'string';
+                const hasActiveIngredients = drug.active_ingredients && Array.isArray(drug.active_ingredients);
+                
+                // Если нет нужных полей для поиска, пропускаем
+                if (!hasName && !hasTradeName && !hasActiveIngredients) return false;
+                
+                // Точное совпадение
+                const nameMatch = hasName && drug.name.toLowerCase().includes(query);
+                const tradeMatch = hasTradeName && drug.trade_names.toLowerCase().includes(query);
+                
+                // Поиск по активным веществам
+                let activeIngredientsMatch = false;
+                if (hasActiveIngredients) {
+                    activeIngredientsMatch = drug.active_ingredients.some(ingredient => 
+                        ingredient.toLowerCase().includes(query)
+                    );
+                }
+                
+                if (nameMatch || tradeMatch || activeIngredientsMatch) return true;
+                
+                // Нечеткий поиск
+                const nameSimilarity = hasName ? Math.max(
+                    ...drug.name.toLowerCase().split(/\s+/).map(word => 
+                        stringSimilarity(word, query)
+                    )
+                ) : 0;
+                
+                return nameSimilarity >= threshold;
+            }).map(drug => ({
+                ...drug,
+                source: isNewdrugsSource ? 'newdrugs' : 'vidal'
+            }));
+        }
+        
+        // Ищем в обеих базах
+        const newdrugsResults = searchInData(newdrugsData, true);
+        const vidalResults = searchInData(drugsData, false);
+        
+        console.log(`Найдено ${newdrugsResults.length} препаратов в новой базе (Newdrugs)`);
+        console.log(`Найдено ${vidalResults.length} препаратов в старой базе (Vidal)`);
+        
+        // Объединяем результаты, но делаем приоритет для новой базы
+        // Создаем карту по названиям, чтобы определить дубликаты
+        const drugMap = new Map();
+        
+        // Для нормализации названий препаратов
+        function normalizeString(str) {
+            return str.toLowerCase()
+                .replace(/ё/g, 'е')
+                .replace(/[^а-яa-z0-9]/gi, '');
+        }
+        
+        // Сначала добавляем препараты из новой базы (они имеют приоритет)
+        newdrugsResults.forEach(drug => {
+            const normalizedName = normalizeString(drug.name);
+            drugMap.set(normalizedName, { 
+                newdrugs: drug, 
+                vidal: null 
+            });
         });
         
-        console.log(`Найдено ${drugResults.length} препаратов`);
-        
-        // Логирование элементов перед отображением
-        console.log('Элементы DOM перед отображением:', {
-            confirmationSection: {
-                element: confirmationSection,
-                display: confirmationSection ? window.getComputedStyle(confirmationSection).display : 'unknown',
-                visibility: confirmationSection ? window.getComputedStyle(confirmationSection).visibility : 'unknown'
-            },
-            drugOptions: {
-                element: drugOptions,
-                display: drugOptions ? window.getComputedStyle(drugOptions).display : 'unknown',
-                visibility: drugOptions ? window.getComputedStyle(drugOptions).visibility : 'unknown'
-            },
-            results: {
-                element: document.getElementById('results'),
-                display: document.getElementById('results') ? window.getComputedStyle(document.getElementById('results')).display : 'unknown',
-                visibility: document.getElementById('results') ? window.getComputedStyle(document.getElementById('results')).visibility : 'unknown'
+        // Затем добавляем препараты из старой базы, если их еще нет или объединяем с существующими
+        vidalResults.forEach(drug => {
+            const normalizedName = normalizeString(drug.name);
+            if (drugMap.has(normalizedName)) {
+                // Если уже есть препарат с таким названием, добавляем данные из старой базы
+                drugMap.get(normalizedName).vidal = drug;
+            } else {
+                // Если нет, создаем новую запись
+                drugMap.set(normalizedName, { 
+                    newdrugs: null, 
+                    vidal: drug 
+                });
             }
         });
+        
+        // Преобразуем карту обратно в массив и придаем структуру для отображения
+        const combinedResults = Array.from(drugMap.values()).map(({ newdrugs, vidal }) => {
+            // Если есть данные из новой базы, используем их как основные
+            if (newdrugs) {
+                return {
+                    ...newdrugs,
+                    hasDualSources: !!vidal,  // Флаг, что есть данные и в старой базе
+                    vidalData: vidal,         // Сохраняем данные из старой базы для дополнительного отображения
+                    sourceLabel: 'Newdrugs.ru'  // Метка источника для отображения
+                };
+            } else {
+                // Иначе используем данные из старой базы
+                return {
+                    ...vidal,
+                    source: 'vidal',
+                    sourceLabel: 'Vidal.ru'
+                };
+            }
+        });
+        
+        console.log(`Всего уникальных препаратов: ${combinedResults.length}`);
         
         // Сортируем результаты по релевантности
-        drugResults.sort((a, b) => {
+        combinedResults.sort((a, b) => {
+            // Приоритет для препаратов из новой базы
+            if (a.source === 'newdrugs' && b.source !== 'newdrugs') return -1;
+            if (a.source !== 'newdrugs' && b.source === 'newdrugs') return 1;
+            
             const aName = a.name ? a.name.toLowerCase() : '';
             const bName = b.name ? b.name.toLowerCase() : '';
             
@@ -346,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Если найдено более одного препарата, показываем список выбора
-        if (drugResults.length > 1) {
+        if (combinedResults.length > 1) {
             console.log('Показываем список препаратов');
             drugInfo.style.display = 'none';
             
@@ -375,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 ensureVisibility(confirmationSection, 'confirmationSection');
                 ensureVisibility(drugOptions, 'drugOptions');
-                showDrugOptions(drugResults);
+                showDrugOptions(combinedResults);
                 
                 // Проверяем, видны ли элементы после отображения
                 const confirmStyle = window.getComputedStyle(confirmationSection);
@@ -419,11 +504,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const resultHeader = document.createElement('div');
                     resultHeader.style.marginBottom = '15px';
                     resultHeader.style.fontWeight = 'bold';
-                    resultHeader.textContent = `Найдено ${drugResults.length} препаратов по запросу "${query}"`;
+                    resultHeader.textContent = `Найдено ${combinedResults.length} препаратов по запросу "${query}"`;
                     fallbackList.appendChild(resultHeader);
                     
                     // Добавляем препараты в список
-                    drugResults.slice(0, 20).forEach((drug, index) => {
+                    combinedResults.slice(0, 20).forEach((drug, index) => {
                         const drugItem = document.createElement('div');
                         drugItem.style.padding = '10px';
                         drugItem.style.margin = '5px 0';
@@ -455,32 +540,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     
                     // Сообщение о количестве показанных результатов
-                    if (drugResults.length > 20) {
+                    if (combinedResults.length > 20) {
                         const moreInfo = document.createElement('div');
                         moreInfo.style.fontStyle = 'italic';
                         moreInfo.style.color = '#666';
                         moreInfo.style.marginTop = '10px';
-                        moreInfo.textContent = `Показаны первые 20 результатов из ${drugResults.length}. Уточните запрос для более точных результатов.`;
+                        moreInfo.textContent = `Показаны первые 20 результатов из ${combinedResults.length}. Уточните запрос для более точных результатов.`;
                         fallbackList.appendChild(moreInfo);
                     }
                 }
             }
-        } 
-        // Если найден ровно один препарат, показываем информацию о нем
-        else if (drugResults.length === 1) {
-            console.log('Найден один препарат, показываем информацию');
-            currentDrug = drugResults[0];
-            const selectedCategories = getSelectedCategories();
-            confirmationSection.style.display = 'none';
-            displayFilteredDrugInfo(currentDrug);
-        } 
-        // Если ничего не найдено, показываем сообщение об ошибке
-        else {
-            console.log('Препараты не найдены');
+        } else if (combinedResults.length === 1) {
+            // Если найден только один препарат, сразу показываем его
+            console.log('Найден только один препарат:', combinedResults[0].name);
+            displayDrugInfo(combinedResults[0]);
+        } else {
+            // Если ничего не найдено
+            errorDiv.textContent = `По запросу "${query}" ничего не найдено`;
+            errorDiv.style.display = 'block';
             confirmationSection.style.display = 'none';
             drugInfo.style.display = 'none';
-            errorDiv.textContent = 'Препараты не найдены. Попробуйте изменить запрос.';
-            errorDiv.style.display = 'block';
         }
     }
     
@@ -550,142 +629,213 @@ document.addEventListener('DOMContentLoaded', () => {
         return fallbackResults;
     }
 
-    // Обновленная функция для показа списка найденных препаратов
+    // Функция показа списка препаратов
     function showDrugOptions(results) {
-        console.log('Отображение списка найденных препаратов:', results.length);
+        // Получаем контейнер для опций
+        const optionsContainer = document.getElementById('drug-options');
+        optionsContainer.innerHTML = '';
         
-        // Проверяем наличие контейнеров для отображения
-        if (!confirmationSection) {
-            console.error('Элемент confirmationSection не найден в DOM');
+        if (!results || results.length === 0) {
+            const noResultsMsg = document.createElement('div');
+            noResultsMsg.className = 'no-results';
+            noResultsMsg.textContent = 'Препаратов не найдено. Попробуйте другой запрос.';
+            optionsContainer.appendChild(noResultsMsg);
             return;
         }
         
-        if (!drugOptions) {
-            console.error('Элемент drugOptions не найден в DOM');
-            return;
-        }
+        // Статистика по источникам
+        const newdrugsCount = results.filter(drug => drug.source === 'newdrugs').length;
+        const vidalCount = results.filter(drug => drug.source === 'vidal').length;
+        const dualSourceCount = results.filter(drug => drug.inBothDatabases).length;
         
-        // Показываем блок выбора препаратов
-        confirmationSection.style.display = 'block';
-        confirmationSection.classList.add('visible', 'active');
-        drugOptions.innerHTML = '';
-        drugOptions.style.display = 'block';
-        drugOptions.classList.add('visible', 'active');
+        // Создаем заголовок с количеством найденных препаратов и статистикой
+        const header = document.createElement('div');
+        header.className = 'search-results-header';
         
-        console.log('Установлены классы для отображения:', {
-            confirmationSection: confirmationSection.className,
-            drugOptions: drugOptions.className
-        });
+        const headerTitle = document.createElement('h2');
+        headerTitle.textContent = `Найдено препаратов: ${results.length}`;
+        header.appendChild(headerTitle);
         
-        // Добавим заголовок для ясности
-        const headerText = document.createElement('div');
-        headerText.className = 'confirmation-header';
-        headerText.textContent = `Найдено ${results.length} препаратов. Выберите один из списка:`;
-        drugOptions.appendChild(headerText);
+        // Добавляем блок со статистикой
+        const sourceStats = document.createElement('div');
+        sourceStats.className = 'source-stats';
         
-        // Создаем список препаратов
-        let optionsAdded = 0;
+        // Статистика Newdrugs
+        const newdrugsStats = document.createElement('div');
+        newdrugsStats.className = 'stats-item';
+        newdrugsStats.innerHTML = `
+            <span class="stats-label">Newdrugs.ru:</span>
+            <span class="stats-value">${newdrugsCount}</span>
+        `;
+        sourceStats.appendChild(newdrugsStats);
         
-        results.slice(0, 20).forEach((drug, index) => { // Ограничиваем 20 результатами
-            console.log(`Препарат ${index + 1}:`, drug.name);
-            
+        // Статистика Vidal
+        const vidalStats = document.createElement('div');
+        vidalStats.className = 'stats-item';
+        vidalStats.innerHTML = `
+            <span class="stats-label">Vidal.ru:</span>
+            <span class="stats-value">${vidalCount}</span>
+        `;
+        sourceStats.appendChild(vidalStats);
+        
+        // Статистика по препаратам в обеих базах
+        const dualStats = document.createElement('div');
+        dualStats.className = 'stats-item';
+        dualStats.innerHTML = `
+            <span class="stats-label">В обеих базах:</span>
+            <span class="stats-value">${dualSourceCount}</span>
+        `;
+        sourceStats.appendChild(dualStats);
+        
+        header.appendChild(sourceStats);
+        optionsContainer.appendChild(header);
+        
+        // Отображаем каждый препарат
+        results.forEach((drug, index) => {
             const option = document.createElement('div');
-            option.className = 'drug-option';
+            option.className = `drug-option ${drug.source === 'newdrugs' ? 'newdrugs-source' : 'vidal-source'}`;
+            option.style.animationDelay = `${index * 0.05}s`;
+
+            // Заголовок с названием и источником
+            const drugHeader = document.createElement('div');
+            drugHeader.className = 'drug-header';
             
-            const optionName = document.createElement('div');
-            optionName.className = 'drug-option-name';
-            optionName.textContent = drug.name || 'Препарат без названия';
-            option.appendChild(optionName);
+            const name = document.createElement('h3');
+            name.textContent = drug.name;
+            drugHeader.appendChild(name);
             
-            // Добавляем дополнительную информацию
-            const addInfo = [];
+            const sourceLabel = document.createElement('span');
+            sourceLabel.className = 'source-label';
+            sourceLabel.textContent = drug.source === 'newdrugs' ? 'Newdrugs.ru' : 'Vidal.ru';
+            drugHeader.appendChild(sourceLabel);
             
-            // Действующие вещества
+            // Иконка, если препарат есть в обеих базах
+            if (drug.inBothDatabases) {
+                const dualSourceIcon = document.createElement('span');
+                dualSourceIcon.className = 'dual-source-icon';
+                dualSourceIcon.title = 'Препарат доступен в обеих базах данных';
+                dualSourceIcon.textContent = '📚';
+                drugHeader.appendChild(dualSourceIcon);
+            }
+            
+            option.appendChild(drugHeader);
+            
+            // Кнопка для отображения подробной информации
+            const viewButton = document.createElement('button');
+            viewButton.textContent = 'Подробнее';
+            viewButton.className = 'view-button';
+            viewButton.addEventListener('click', () => {
+                displayDrugInfo(drug);
+            });
+            option.appendChild(viewButton);
+            
+            // Основная информация (действующие вещества и показания)
+            const summary = document.createElement('div');
+            summary.className = 'drug-summary';
+            
             if (drug.active_ingredients && drug.active_ingredients.length > 0) {
-                addInfo.push(`Действующие вещества: ${drug.active_ingredients.join(', ')}`);
-            }
-            
-            // Форма выпуска
-            if (drug.form_type) {
-                addInfo.push(`Форма выпуска: ${drug.form_type}`);
-            }
-            
-            // Производитель
-            if (drug.manufacturer_info && drug.manufacturer_info.manufacturer) {
-                addInfo.push(`Производитель: ${drug.manufacturer_info.manufacturer}`);
-            }
-            
-            // Добавляем дополнительную информацию в опцию
-            if (addInfo.length > 0) {
-                const optionDetails = document.createElement('div');
-                optionDetails.className = 'drug-option-details';
-                optionDetails.innerHTML = addInfo.join('<br>');
-                option.appendChild(optionDetails);
-            }
-            
-            // Обработчик клика
-            option.addEventListener('click', function() {
-                console.log('Выбран препарат:', drug.name);
-                currentDrug = drug;
-                confirmationSection.style.display = 'none';
+                const ingredients = document.createElement('div');
+                ingredients.className = 'ingredients';
                 
-                // Показываем секцию с информацией о препарате
-                drugInfo.style.display = 'block';
-                drugInfo.classList.add('visible');
-                const resultsSection = document.getElementById('results');
-                if (resultsSection) {
-                    resultsSection.style.display = 'block';
-                    resultsSection.classList.add('visible');
+                const ingredientsLabel = document.createElement('span');
+                ingredientsLabel.className = 'summary-label';
+                ingredientsLabel.textContent = 'Действующие вещества: ';
+                ingredients.appendChild(ingredientsLabel);
+                
+                const ingredientsText = document.createElement('span');
+                ingredientsText.textContent = Array.isArray(drug.active_ingredients) 
+                    ? drug.active_ingredients.join(', ') 
+                    : drug.active_ingredients;
+                ingredients.appendChild(ingredientsText);
+                
+                summary.appendChild(ingredients);
+            }
+            
+            if (drug.indications) {
+                const indications = document.createElement('div');
+                indications.className = 'indications';
+                
+                const indicationsLabel = document.createElement('span');
+                indicationsLabel.className = 'summary-label';
+                indicationsLabel.textContent = 'Показания: ';
+                indications.appendChild(indicationsLabel);
+                
+                const indicationsText = document.createElement('span');
+                // Ограничиваем длину текста показаний
+                const maxLength = 150;
+                let indicationsContent = drug.indications;
+                if (typeof indicationsContent === 'string' && indicationsContent.length > maxLength) {
+                    indicationsContent = indicationsContent.substring(0, maxLength) + '...';
                 }
+                indicationsText.textContent = indicationsContent;
+                indications.appendChild(indicationsText);
                 
-                displayFilteredDrugInfo(drug);
-                
-                // Прокручиваем страницу к информации о препарате
-                drugInfo.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
+                summary.appendChild(indications);
+            }
             
-            drugOptions.appendChild(option);
-            optionsAdded++;
+            option.appendChild(summary);
+            optionsContainer.appendChild(option);
         });
-        
-        console.log(`Добавлено ${optionsAdded} опций в список`);
-        
-        // Если результатов много, показываем сообщение
-        if (results.length > 20) {
-            const moreResults = document.createElement('div');
-            moreResults.className = 'more-results';
-            moreResults.textContent = `Показаны первые 20 результатов из ${results.length}. Уточните запрос для более точных результатов.`;
-            drugOptions.appendChild(moreResults);
-        }
-        
-        // Через небольшую задержку проверяем видимость элементов
-        setTimeout(() => {
-            const computedConfirmStyle = window.getComputedStyle(confirmationSection);
-            const computedOptionsStyle = window.getComputedStyle(drugOptions);
-            
-            console.log('Проверка стилей через таймаут:', {
-                confirmationSection: {
-                    display: computedConfirmStyle.display,
-                    visibility: computedConfirmStyle.visibility,
-                    opacity: computedConfirmStyle.opacity
-                },
-                drugOptions: {
-                    display: computedOptionsStyle.display,
-                    visibility: computedOptionsStyle.visibility,
-                    opacity: computedOptionsStyle.opacity
-                }
-            });
-            
-            // Если элементы все еще не видны, добавляем класс force-visible
-            if (computedConfirmStyle.display === 'none' || computedOptionsStyle.display === 'none') {
-                console.log('Элементы всё еще не видны, применяем дополнительные классы');
-                confirmationSection.classList.add('force-visible');
-                drugOptions.classList.add('force-visible');
-            }
-        }, 100);
     }
     
-    // Функция отображения отфильтрованной информации о препарате
+    // Функция для адаптации структуры препарата из разных источников
+    function adaptDrugData(drug) {
+        if (!drug) return {};
+        
+        const adaptedDrug = { ...drug };
+        
+        // Определяем источник данных
+        const isNewdrugs = drug.source === 'newdrugs';
+        
+        // Адаптируем данные в зависимости от источника
+        if (isNewdrugs) {
+            // Адаптация полей из Newdrugs
+            
+            // Обработка данных дозировки (может быть в виде объекта с HTML и текстом)
+            if (drug.dosage && typeof drug.dosage === 'object') {
+                // Если есть HTML-таблица с дозировкой, используем её
+                if (drug.dosage.html) {
+                    adaptedDrug.dosage_html = drug.dosage.html;
+                    adaptedDrug.dosage = drug.dosage.text || '';
+                }
+                // Если есть структурированные данные, сохраняем их
+                if (drug.dosage.data && Array.isArray(drug.dosage.data)) {
+                    adaptedDrug.dosage_data = drug.dosage.data;
+                }
+            }
+            
+            // Обработка других специфичных полей Newdrugs
+            adaptedDrug.usage = drug.usage_conditions || '';
+        } else {
+            // Адаптация полей из Vidal
+            
+            // Извлекаем данные из вложенного объекта manufacturer_info
+            if (drug.manufacturer_info) {
+                adaptedDrug.producer = drug.manufacturer_info.manufacturer;
+                adaptedDrug.producer_country = drug.manufacturer_info.manufacturer_country;
+                adaptedDrug.registration_holder = drug.manufacturer_info.registration_holder;
+                adaptedDrug.registration_holder_country = drug.manufacturer_info.registration_holder_country;
+            }
+            
+            // Условия отпуска
+            if (drug.prescription_required) {
+                adaptedDrug.usage = 'По рецепту';
+            } else if (drug.usage === undefined) {
+                adaptedDrug.usage = 'Без рецепта';
+            }
+        }
+        
+        // Преобразуем активные ингредиенты в строку, если это массив
+        if (Array.isArray(drug.active_ingredients)) {
+            adaptedDrug.active_ingredients_text = drug.active_ingredients.join(', ');
+        } else {
+            adaptedDrug.active_ingredients_text = drug.active_ingredients || '';
+        }
+        
+        return adaptedDrug;
+    }
+
+    // Обновляем функцию displayFilteredDrugInfo для лучшей обработки данных из разных источников
     function displayFilteredDrugInfo(drug) {
         if (!drug) {
             console.error('Нет данных о препарате для отображения');
@@ -715,14 +865,35 @@ document.addEventListener('DOMContentLoaded', () => {
         drugTitle.textContent = drug.name || 'Препарат без названия';
         drugHeader.appendChild(drugTitle);
         
-        // Кнопка "Подробнее"
-        const detailsButton = document.createElement('button');
-        detailsButton.className = 'details-button';
-        detailsButton.textContent = 'Подробная информация';
-        detailsButton.addEventListener('click', () => {
-            displayDrugInfo(drug, getSelectedCategories());
-        });
-        drugHeader.appendChild(detailsButton);
+        // Добавляем индикатор источника данных
+        const sourceLabel = document.createElement('div');
+        sourceLabel.className = 'source-label';
+        sourceLabel.textContent = drug.source === 'newdrugs' ? 'Источник: Newdrugs.ru' : 'Источник: Vidal.ru';
+        drugHeader.appendChild(sourceLabel);
+        
+        // Если у препарата есть данные из обоих источников, добавляем кнопку для переключения
+        if (drug.hasDualSources && drug.vidalData) {
+            const toggleButton = document.createElement('button');
+            toggleButton.className = 'toggle-source-btn';
+            toggleButton.textContent = 'Показать данные Vidal';
+            toggleButton.dataset.showing = 'newdrugs';
+            toggleButton.onclick = function() {
+                if (toggleButton.dataset.showing === 'vidal') {
+                    // Показываем данные из newdrugs
+                    displayFilteredDrugInfo(drug);
+                    toggleButton.textContent = 'Показать данные Vidal';
+                    toggleButton.dataset.showing = 'newdrugs';
+                    sourceLabel.textContent = 'Источник: Newdrugs.ru';
+                } else {
+                    // Показываем данные из vidal
+                    displayFilteredDrugInfo(drug.vidalData);
+                    toggleButton.textContent = 'Показать данные Newdrugs';
+                    toggleButton.dataset.showing = 'vidal';
+                    sourceLabel.textContent = 'Источник: Vidal.ru';
+                }
+            };
+            drugHeader.appendChild(toggleButton);
+        }
         
         drugContent.appendChild(drugHeader);
         
@@ -743,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: 'active_ingredients',
                 title: 'Действующие вещества',
                 category: 'Состав',
-                customFormat: (value) => Array.isArray(value) ? value.join(', ') : value
+                value: (drug) => drug.active_ingredients_text
             },
             // Форма выпуска
             {
@@ -763,11 +934,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Противопоказания',
                 category: 'Противопоказания'
             },
-            // Способ применения и дозы
+            // Способ применения и дозы (с особой обработкой для HTML)
             {
                 name: 'dosage',
                 title: 'Способ применения и дозы',
-                category: 'Дозировка'
+                category: 'Дозировка',
+                customRender: (drug) => {
+                    const container = document.createElement('div');
+                    
+                    // Если есть HTML-таблица, показываем её
+                    if (drug.dosage_html) {
+                        container.innerHTML = drug.dosage_html;
+                    } else {
+                        container.textContent = drug.dosage || 'Нет данных';
+                    }
+                    
+                    return container;
+                }
             },
             // Побочные эффекты
             {
@@ -797,8 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {
             {
                 name: 'usage',
                 title: 'Условия отпуска',
-                category: 'Условия отпуска',
-                customFormat: formatUsageWithIcon
+                category: 'Условия отпуска'
             },
             // Производитель
             {
@@ -811,14 +993,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: 'producer_country',
                 title: 'Страна производства',
                 category: 'Регистрационная информация'
+            },
+            // Регистрационный номер (может быть в разных полях)
+            {
+                name: 'registration_number',
+                title: 'Регистрационный номер',
+                category: 'Регистрационная информация'
             }
         ];
         
         // Отображаем выбранные разделы или все, если категории не выбраны
         sections.forEach(section => {
             if (selectedCategories.length === 0 || selectedCategories.includes(section.category)) {
-                const value = adaptedDrug[section.name];
+                // Определяем значение поля (может быть функцией)
+                let value;
+                if (section.value && typeof section.value === 'function') {
+                    value = section.value(adaptedDrug);
+                } else {
+                    value = adaptedDrug[section.name];
+                }
                 
+                // Проверяем наличие значения
                 if (value && (typeof value === 'string' ? value.trim() : true)) {
                     const sectionElement = document.createElement('div');
                     sectionElement.className = 'drug-section';
@@ -830,23 +1025,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const contentElement = document.createElement('div');
                     contentElement.className = 'section-content';
                     
-                    if (section.customFormat) {
-                        // Если есть функция форматирования, используем ее
-                        let formattedContent;
-                        
-                        // Для условий отпуска передаем дополнительную информацию о препарате
-                        if (section.name === 'usage') {
-                            formattedContent = section.customFormat(value, drug);
-                        } else {
-                            formattedContent = section.customFormat(value);
-                        }
-                        
-                        if (typeof formattedContent === 'string') {
-                            contentElement.textContent = formattedContent;
-                        } else if (formattedContent instanceof HTMLElement) {
-                            contentElement.appendChild(formattedContent);
-                        } else if (formattedContent instanceof DocumentFragment) {
-                            contentElement.appendChild(formattedContent);
+                    // Если есть пользовательский рендер, используем его
+                    if (section.customRender) {
+                        const customContent = section.customRender(adaptedDrug);
+                        if (customContent instanceof HTMLElement) {
+                            contentElement.appendChild(customContent);
+                        } else if (typeof customContent === 'string') {
+                            contentElement.innerHTML = customContent;
                         }
                     } else {
                         contentElement.textContent = value;
@@ -870,11 +1055,226 @@ document.addEventListener('DOMContentLoaded', () => {
         
         console.log('Информация о препарате успешно отображена');
     }
-    
-    // Функция для форматирования условий отпуска с иконкой
-    function formatUsageWithIcon(usageText, drugInfo) {
-        // Просто возвращаем текст
-        return usageText || '';
+
+    // Функция для отображения отфильтрованной информации о препарате
+    function displayFilteredDrugInfo(drug) {
+        if (!drug) {
+            console.error('Нет данных о препарате для отображения');
+            return;
+        }
+        
+        console.log('Отображение информации о препарате:', drug.name);
+        
+        // Показываем блок информации о препарате
+        drugInfo.style.display = 'block';
+        drugInfo.classList.add('visible');
+        
+        const resultsSection = document.getElementById('results');
+        if (resultsSection) {
+            resultsSection.style.display = 'block';
+            resultsSection.classList.add('visible');
+        }
+        
+        drugContent.innerHTML = '';
+        
+        // Заголовок с названием препарата
+        const drugHeader = document.createElement('div');
+        drugHeader.className = 'drug-header';
+        
+        const drugTitle = document.createElement('h2');
+        drugTitle.className = 'drug-title';
+        drugTitle.textContent = drug.name || 'Препарат без названия';
+        drugHeader.appendChild(drugTitle);
+        
+        // Добавляем индикатор источника данных
+        const sourceLabel = document.createElement('div');
+        sourceLabel.className = 'source-label';
+        sourceLabel.textContent = drug.source === 'newdrugs' ? 'Источник: Newdrugs.ru' : 'Источник: Vidal.ru';
+        drugHeader.appendChild(sourceLabel);
+        
+        // Если у препарата есть данные из обоих источников, добавляем кнопку для переключения
+        if (drug.hasDualSources && drug.vidalData) {
+            const toggleButton = document.createElement('button');
+            toggleButton.className = 'toggle-source-btn';
+            toggleButton.textContent = 'Показать данные Vidal';
+            toggleButton.dataset.showing = 'newdrugs';
+            toggleButton.onclick = function() {
+                if (toggleButton.dataset.showing === 'vidal') {
+                    // Показываем данные из newdrugs
+                    displayFilteredDrugInfo(drug);
+                    toggleButton.textContent = 'Показать данные Vidal';
+                    toggleButton.dataset.showing = 'newdrugs';
+                    sourceLabel.textContent = 'Источник: Newdrugs.ru';
+                } else {
+                    // Показываем данные из vidal
+                    displayFilteredDrugInfo(drug.vidalData);
+                    toggleButton.textContent = 'Показать данные Newdrugs';
+                    toggleButton.dataset.showing = 'vidal';
+                    sourceLabel.textContent = 'Источник: Vidal.ru';
+                }
+            };
+            drugHeader.appendChild(toggleButton);
+        }
+        
+        drugContent.appendChild(drugHeader);
+        
+        // Адаптируем структуру препарата к отображению
+        const adaptedDrug = adaptDrugData(drug);
+        
+        // Краткая информация о препарате
+        const drugSummary = document.createElement('div');
+        drugSummary.className = 'drug-summary';
+        
+        // Получаем выбранные категории
+        const selectedCategories = getSelectedCategories();
+        
+        // Определяем порядок и категории разделов информации
+        const sections = [
+            // Активные вещества (с особой обработкой для массива)
+            {
+                name: 'active_ingredients',
+                title: 'Действующие вещества',
+                category: 'Состав',
+                value: (drug) => drug.active_ingredients_text
+            },
+            // Форма выпуска
+            {
+                name: 'form_type',
+                title: 'Форма выпуска',
+                category: 'Дозировка'
+            },
+            // Показания к применению
+            {
+                name: 'indications',
+                title: 'Показания к применению',
+                category: 'Показания'
+            },
+            // Противопоказания
+            {
+                name: 'contraindications',
+                title: 'Противопоказания',
+                category: 'Противопоказания'
+            },
+            // Способ применения и дозы (с особой обработкой для HTML)
+            {
+                name: 'dosage',
+                title: 'Способ применения и дозы',
+                category: 'Дозировка',
+                customRender: (drug) => {
+                    const container = document.createElement('div');
+                    
+                    // Если есть HTML-таблица, показываем её
+                    if (drug.dosage_html) {
+                        container.innerHTML = drug.dosage_html;
+                    } else {
+                        container.textContent = drug.dosage || 'Нет данных';
+                    }
+                    
+                    return container;
+                }
+            },
+            // Побочные эффекты
+            {
+                name: 'side_effects',
+                title: 'Побочные эффекты',
+                category: 'Побочные эффекты'
+            },
+            // Состав
+            {
+                name: 'composition',
+                title: 'Состав',
+                category: 'Состав'
+            },
+            // Условия хранения
+            {
+                name: 'storage',
+                title: 'Условия хранения',
+                category: 'Хранение'
+            },
+            // Срок годности
+            {
+                name: 'shelf_life',
+                title: 'Срок годности',
+                category: 'Хранение'
+            },
+            // Условия отпуска
+            {
+                name: 'usage',
+                title: 'Условия отпуска',
+                category: 'Условия отпуска'
+            },
+            // Производитель
+            {
+                name: 'producer',
+                title: 'Производитель',
+                category: 'Регистрационная информация'
+            },
+            // Страна производства
+            {
+                name: 'producer_country',
+                title: 'Страна производства',
+                category: 'Регистрационная информация'
+            },
+            // Регистрационный номер (может быть в разных полях)
+            {
+                name: 'registration_number',
+                title: 'Регистрационный номер',
+                category: 'Регистрационная информация'
+            }
+        ];
+        
+        // Отображаем выбранные разделы или все, если категории не выбраны
+        sections.forEach(section => {
+            if (selectedCategories.length === 0 || selectedCategories.includes(section.category)) {
+                // Определяем значение поля (может быть функцией)
+                let value;
+                if (section.value && typeof section.value === 'function') {
+                    value = section.value(adaptedDrug);
+                } else {
+                    value = adaptedDrug[section.name];
+                }
+                
+                // Проверяем наличие значения
+                if (value && (typeof value === 'string' ? value.trim() : true)) {
+                    const sectionElement = document.createElement('div');
+                    sectionElement.className = 'drug-section';
+                    
+                    const titleElement = document.createElement('div');
+                    titleElement.className = 'section-title';
+                    titleElement.textContent = section.title;
+                    
+                    const contentElement = document.createElement('div');
+                    contentElement.className = 'section-content';
+                    
+                    // Если есть пользовательский рендер, используем его
+                    if (section.customRender) {
+                        const customContent = section.customRender(adaptedDrug);
+                        if (customContent instanceof HTMLElement) {
+                            contentElement.appendChild(customContent);
+                        } else if (typeof customContent === 'string') {
+                            contentElement.innerHTML = customContent;
+                        }
+                    } else {
+                        contentElement.textContent = value;
+                    }
+                    
+                    sectionElement.appendChild(titleElement);
+                    sectionElement.appendChild(contentElement);
+                    drugSummary.appendChild(sectionElement);
+                }
+            }
+        });
+        
+        // Добавляем краткую информацию в содержимое
+        drugContent.appendChild(drugSummary);
+        
+        // Показываем кнопку "Сообщить об ошибке"
+        if (reportErrorBtn) {
+            reportErrorBtn.style.display = 'flex';
+            reportErrorBtn.classList.add('visible');
+        }
+        
+        console.log('Информация о препарате успешно отображена');
     }
 
     // Функция для отображения модального окна сообщения об ошибке
@@ -1216,137 +1616,60 @@ function displayFilteredDrugs(filteredDrugs) {
 
 // Обновляем функцию displayDrugInfo для модального окна
 function displayDrugInfo(drug, selectedCategories = []) {
-    // Отображаем модальное окно с информацией о препарате
-    const modal = document.getElementById('drug-info-modal');
-    const modalTitle = document.getElementById('drug-info-title');
-    const modalBody = document.getElementById('drug-info-body');
-
-    // Устанавливаем заголовок модального окна
-    modalTitle.innerHTML = drug.name || 'Препарат без названия';
-
-    // Отображаем информацию о препарате
-    displayFilteredDrugInfo(drug, modalBody, selectedCategories);
-
-    // Отображаем модальное окно
-    modal.style.display = 'block';
-
-    // Обработчик закрытия модального окна
-    const closeButton = document.querySelector('.close');
-    closeButton.onclick = function() {
-        modal.style.display = 'none';
-    }
-
-    // Закрытие модального окна при клике вне его
-    window.onclick = function(event) {
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    }
-}
-
-// Функция для отображения отфильтрованной информации о препарате
-function displayFilteredDrugInfo(drug, container, selectedCategories) {
-    container.innerHTML = ''; // Очищаем контейнер
-
-    // Показываем только выбранные категории или все, если ни одна не выбрана
-    const showAllCategories = selectedCategories.length === 0;
+    console.log('Отображаем информацию о препарате:', drug.name);
     
-    // Создаем контейнер для вывода информации
-    const infoContainer = document.createElement('div');
-    infoContainer.className = 'drug-info-container';
-
-    // Действующие вещества
-    if (showAllCategories || selectedCategories.includes('active-ingredients')) {
-        addInfoSection(infoContainer, 'Действующие вещества', drug.active_ingredients ? (Array.isArray(drug.active_ingredients) ? drug.active_ingredients.join(', ') : drug.active_ingredients) : 'Нет данных');
-    }
-
-    // АТХ классификация
-    if (showAllCategories || selectedCategories.includes('atc-classification')) {
-        addInfoSection(infoContainer, 'ATX классификация', drug.atc_classification || 'Нет данных');
-    }
-
-    // Фармакологическая группа
-    if (showAllCategories || selectedCategories.includes('pharma-group')) {
-        addInfoSection(infoContainer, 'Фармакологическая группа', drug.pharma_group || 'Нет данных');
-    }
-
-    // Условия отпуска (с иконкой)
-    if (showAllCategories || selectedCategories.includes('conditions')) {
-        const usageText = drug.conditions || 'Нет данных об условиях отпуска';
-        
-        // Используем текст напрямую, без иконки
-        addInfoSection(infoContainer, 'Условия отпуска', usageText);
-    }
-
-    // Показания к применению
-    if (showAllCategories || selectedCategories.includes('indications')) {
-        addInfoSection(infoContainer, 'Показания к применению', drug.indications || 'Нет данных');
-    }
-
-    // Противопоказания
-    if (showAllCategories || selectedCategories.includes('contraindications')) {
-        addInfoSection(infoContainer, 'Противопоказания', drug.contraindications || 'Нет данных');
-    }
-
-    // Побочные эффекты
-    if (showAllCategories || selectedCategories.includes('side-effects')) {
-        addInfoSection(infoContainer, 'Побочные эффекты', drug.side_effects || 'Нет данных');
-    }
-
-    // Особые указания
-    if (showAllCategories || selectedCategories.includes('special-instructions')) {
-        addInfoSection(infoContainer, 'Особые указания', drug.special_instructions || 'Нет данных');
-    }
-
-    // Способ применения и дозировка
-    if (showAllCategories || selectedCategories.includes('dosage')) {
-        addInfoSection(infoContainer, 'Способ применения и дозировка', drug.dosage || 'Нет данных');
-    }
-
-    // Передозировка
-    if (showAllCategories || selectedCategories.includes('overdose')) {
-        addInfoSection(infoContainer, 'Передозировка', drug.overdose || 'Нет данных');
-    }
-
-    // Лекарственные взаимодействия
-    if (showAllCategories || selectedCategories.includes('interactions')) {
-        addInfoSection(infoContainer, 'Лекарственные взаимодействия', drug.interactions || 'Нет данных');
-    }
-
-    // Форма выпуска
-    if (showAllCategories || selectedCategories.includes('form')) {
-        addInfoSection(infoContainer, 'Форма выпуска', drug.form || 'Нет данных');
-    }
-
-    // Производитель
-    if (showAllCategories || selectedCategories.includes('manufacturer')) {
-        addInfoSection(infoContainer, 'Производитель', drug.manufacturer || 'Нет данных');
-    }
-
-    // Добавляем контейнер с информацией в родительский контейнер
-    container.appendChild(infoContainer);
-}
-
-// Функция для адаптации структуры препарата
-function adaptDrugData(drug) {
-    if (!drug) return {};
+    // Сохраняем выбранный препарат
+    currentDrug = drug;
     
-    const adaptedDrug = { ...drug };
+    // Скрываем блок выбора и показываем блок информации
+    confirmationSection.style.display = 'none';
+    drugInfo.style.display = 'block';
     
-    // Извлекаем данные из вложенного объекта manufacturer_info
-    if (drug.manufacturer_info) {
-        adaptedDrug.producer = drug.manufacturer_info.manufacturer;
-        adaptedDrug.producer_country = drug.manufacturer_info.manufacturer_country;
-        adaptedDrug.registration_holder = drug.manufacturer_info.registration_holder;
-        adaptedDrug.registration_holder_country = drug.manufacturer_info.registration_holder_country;
+    // Очищаем содержимое
+    drugContent.innerHTML = '';
+    
+    // Создаем заголовок с названием препарата
+    const header = document.createElement('div');
+    header.className = 'drug-header';
+    
+    const titleElement = document.createElement('h1');
+    titleElement.textContent = drug.name;
+    header.appendChild(titleElement);
+    
+    // Добавляем индикатор источника данных
+    const sourceLabel = document.createElement('div');
+    sourceLabel.className = 'source-label';
+    sourceLabel.textContent = drug.source === 'newdrugs' ? 'Источник: Newdrugs.ru' : 'Источник: Vidal.ru';
+    header.appendChild(sourceLabel);
+    
+    // Если у препарата есть данные из обоих источников, добавляем кнопку для переключения
+    if (drug.hasDualSources && drug.vidalData) {
+        const toggleButton = document.createElement('button');
+        toggleButton.className = 'toggle-source-btn';
+        toggleButton.textContent = 'Показать данные Vidal';
+        toggleButton.dataset.showing = 'newdrugs';
+        toggleButton.onclick = function() {
+            if (toggleButton.dataset.showing === 'vidal') {
+                // Показываем данные из newdrugs
+                displayFilteredDrugInfo(drug);
+                toggleButton.textContent = 'Показать данные Vidal';
+                toggleButton.dataset.showing = 'newdrugs';
+                sourceLabel.textContent = 'Источник: Newdrugs.ru';
+            } else {
+                // Показываем данные из vidal
+                displayFilteredDrugInfo(drug.vidalData);
+                toggleButton.textContent = 'Показать данные Newdrugs';
+                toggleButton.dataset.showing = 'vidal';
+                sourceLabel.textContent = 'Источник: Vidal.ru';
+            }
+        };
+        header.appendChild(toggleButton);
     }
     
-    // Преобразуем активные ингредиенты в строку, если это массив
-    if (Array.isArray(drug.active_ingredients)) {
-        adaptedDrug.active_ingredients = drug.active_ingredients;
-    }
+    drugContent.appendChild(header);
     
-    return adaptedDrug;
+    // Отображаем информацию о препарате в соответствии с выбранными категориями
+    displayFilteredDrugInfo(drug);
 }
 
 // Обновляю функцию initApp, удаляя инициализацию фильтров
