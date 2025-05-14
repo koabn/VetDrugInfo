@@ -784,32 +784,66 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const adaptedDrug = { ...drug };
         
-        // Определяем источник данных
-        const isNewdrugs = drug.source === 'newdrugs';
+        // Определяем источник данных по наличию характерных полей
+        const isNewFormat = drug.hasOwnProperty('shortDescription') || drug.hasOwnProperty('generalInfo');
         
-        // Адаптируем данные в зависимости от источника
-        if (isNewdrugs) {
-            // Адаптация полей из Newdrugs
+        if (isNewFormat) {
+            // Адаптация полей из нового формата
+            adaptedDrug.description = drug.shortDescription || '';
+            adaptedDrug.producer = drug.manufacturer || '';
+            adaptedDrug.registration_number = drug.registrationNumber || '';
             
-            // Обработка данных дозировки (может быть в виде объекта с HTML и текстом)
-            if (drug.dosage && typeof drug.dosage === 'object') {
-                // Если есть HTML-таблица с дозировкой, используем её
-                if (drug.dosage.html) {
-                    adaptedDrug.dosage_html = drug.dosage.html;
-                    adaptedDrug.dosage = drug.dosage.text || '';
-                }
-                // Если есть структурированные данные, сохраняем их
-                if (drug.dosage.data && Array.isArray(drug.dosage.data)) {
-                    adaptedDrug.dosage_data = drug.dosage.data;
-                }
+            // Обработка общих сведений
+            if (drug.generalInfo) {
+                adaptedDrug.general_info = drug.generalInfo;
             }
             
-            // Обработка других специфичных полей Newdrugs
-            adaptedDrug.usage = drug.usage_conditions || '';
-        } else {
-            // Адаптация полей из Vidal
+            // Обработка состава
+            if (drug.composition) {
+                adaptedDrug.composition = drug.composition;
+            }
             
-            // Извлекаем данные из вложенного объекта manufacturer_info
+            // Обработка таблицы дозировок
+            if (drug.dosageTable && Array.isArray(drug.dosageTable)) {
+                // Создаем HTML-таблицу из данных
+                let tableHtml = '<table class="dosage-table">';
+                tableHtml += '<tr><th>Вид животных</th><th>Порядок применения</th><th>Нормы ввода</th></tr>';
+                
+                drug.dosageTable.forEach(row => {
+                    tableHtml += `<tr>
+                        <td>${row.animal || ''}</td>
+                        <td>${row.usage || ''}</td>
+                        <td>${row.dosage || ''}</td>
+                    </tr>`;
+                });
+                
+                tableHtml += '</table>';
+                
+                adaptedDrug.dosage_html = tableHtml;
+                adaptedDrug.dosage_data = drug.dosageTable;
+            }
+            
+            // Обработка условий хранения
+            if (drug.storage) {
+                adaptedDrug.storage = drug.storage;
+            }
+            
+            // Обработка биологических свойств
+            if (drug.biologicalProperties) {
+                adaptedDrug.biological_properties = drug.biologicalProperties;
+            }
+            
+            // Обработка инструкций по применению
+            if (drug.usageInstructions) {
+                adaptedDrug.usage_instructions = drug.usageInstructions;
+            }
+            
+            // Обработка мер безопасности
+            if (drug.safetyMeasures) {
+                adaptedDrug.safety_measures = drug.safetyMeasures;
+            }
+        } else {
+            // Старая логика для данных из Vidal
             if (drug.manufacturer_info) {
                 adaptedDrug.producer = drug.manufacturer_info.manufacturer;
                 adaptedDrug.producer_country = drug.manufacturer_info.manufacturer_country;
@@ -817,19 +851,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 adaptedDrug.registration_holder_country = drug.manufacturer_info.registration_holder_country;
             }
             
-            // Условия отпуска
             if (drug.prescription_required) {
                 adaptedDrug.usage = 'По рецепту';
             } else if (drug.usage === undefined) {
                 adaptedDrug.usage = 'Без рецепта';
             }
-        }
-        
-        // Преобразуем активные ингредиенты в строку, если это массив
-        if (Array.isArray(drug.active_ingredients)) {
-            adaptedDrug.active_ingredients_text = drug.active_ingredients.join(', ');
-        } else {
-            adaptedDrug.active_ingredients_text = drug.active_ingredients || '';
+            
+            // Преобразуем активные ингредиенты в строку, если это массив
+            if (Array.isArray(drug.active_ingredients)) {
+                adaptedDrug.active_ingredients_text = drug.active_ingredients.join(', ');
+            } else {
+                adaptedDrug.active_ingredients_text = drug.active_ingredients || '';
+            }
         }
         
         return adaptedDrug;
@@ -876,54 +909,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Определяем порядок и категории разделов информации
         const sections = [
-            // Активные вещества (с особой обработкой для массива)
+            // Краткое описание
             {
-                name: 'active_ingredients',
-                title: 'Действующие вещества',
-                category: 'Состав',
-                value: (drug) => drug.active_ingredients_text
+                name: 'description',
+                title: 'Краткое описание',
+                category: 'Общая информация'
             },
-            // Форма выпуска
+            // Общие сведения
             {
-                name: 'form_type',
-                title: 'Форма выпуска',
-                category: 'Дозировка'
-            },
-            // Показания к применению
-            {
-                name: 'indications',
-                title: 'Показания к применению',
-                category: 'Показания'
-            },
-            // Противопоказания
-            {
-                name: 'contraindications',
-                title: 'Противопоказания',
-                category: 'Противопоказания'
-            },
-            // Способ применения и дозы (с особой обработкой для HTML)
-            {
-                name: 'dosage',
-                title: 'Способ применения и дозы',
-                category: 'Дозировка',
-                customRender: (drug) => {
-                    const container = document.createElement('div');
-                    
-                    // Если есть HTML-таблица, показываем её
-                    if (drug.dosage_html) {
-                        container.innerHTML = drug.dosage_html;
-                    } else {
-                        container.textContent = drug.dosage || 'Нет данных';
-                    }
-                    
-                    return container;
-                }
-            },
-            // Побочные эффекты
-            {
-                name: 'side_effects',
-                title: 'Побочные эффекты',
-                category: 'Побочные эффекты'
+                name: 'general_info',
+                title: 'Общие сведения',
+                category: 'Общая информация'
             },
             // Состав
             {
@@ -931,23 +927,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Состав',
                 category: 'Состав'
             },
+            // Биологические свойства
+            {
+                name: 'biological_properties',
+                title: 'Биологические свойства',
+                category: 'Фармакология'
+            },
+            // Инструкции по применению
+            {
+                name: 'usage_instructions',
+                title: 'Инструкции по применению',
+                category: 'Применение'
+            },
+            // Дозировка (таблица)
+            {
+                name: 'dosage_html',
+                title: 'Дозировка и способ применения',
+                category: 'Дозировка',
+                customRender: (drug) => {
+                    const container = document.createElement('div');
+                    if (drug.dosage_html) {
+                        container.innerHTML = drug.dosage_html;
+                    } else if (drug.dosage) {
+                        container.textContent = drug.dosage;
+                    }
+                    return container;
+                }
+            },
+            // Меры безопасности
+            {
+                name: 'safety_measures',
+                title: 'Меры безопасности',
+                category: 'Безопасность'
+            },
             // Условия хранения
             {
                 name: 'storage',
                 title: 'Условия хранения',
                 category: 'Хранение'
-            },
-            // Срок годности
-            {
-                name: 'shelf_life',
-                title: 'Срок годности',
-                category: 'Хранение'
-            },
-            // Условия отпуска
-            {
-                name: 'usage',
-                title: 'Условия отпуска',
-                category: 'Условия отпуска'
             },
             // Производитель
             {
@@ -955,13 +972,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: 'Производитель',
                 category: 'Регистрационная информация'
             },
-            // Страна производства
-            {
-                name: 'producer_country',
-                title: 'Страна производства',
-                category: 'Регистрационная информация'
-            },
-            // Регистрационный номер (может быть в разных полях)
+            // Регистрационный номер
             {
                 name: 'registration_number',
                 title: 'Регистрационный номер',
@@ -972,55 +983,39 @@ document.addEventListener('DOMContentLoaded', () => {
         // Отображаем выбранные разделы или все, если категории не выбраны
         sections.forEach(section => {
             if (selectedCategories.length === 0 || selectedCategories.includes(section.category)) {
-                // Определяем значение поля (может быть функцией)
                 let value;
-                if (section.value && typeof section.value === 'function') {
-                    value = section.value(adaptedDrug);
+                if (section.customRender) {
+                    value = section.customRender(adaptedDrug);
                 } else {
                     value = adaptedDrug[section.name];
                 }
                 
-                // Проверяем наличие значения
-                if (value && (typeof value === 'string' ? value.trim() : true)) {
-                    const sectionElement = document.createElement('div');
-                    sectionElement.className = 'drug-section';
+                if (value) {
+                    const sectionDiv = document.createElement('div');
+                    sectionDiv.className = 'drug-section';
                     
-                    const titleElement = document.createElement('div');
-                    titleElement.className = 'section-title';
-                    titleElement.textContent = section.title;
+                    const title = document.createElement('h3');
+                    title.textContent = section.title;
+                    sectionDiv.appendChild(title);
                     
-                    const contentElement = document.createElement('div');
-                    contentElement.className = 'section-content';
-                    
-                    // Если есть пользовательский рендер, используем его
-                    if (section.customRender) {
-                        const customContent = section.customRender(adaptedDrug);
-                        if (customContent instanceof HTMLElement) {
-                            contentElement.appendChild(customContent);
-                        } else if (typeof customContent === 'string') {
-                            contentElement.innerHTML = customContent;
-                        }
+                    if (value instanceof Element) {
+                        sectionDiv.appendChild(value);
                     } else {
-                        contentElement.textContent = value;
+                        const content = document.createElement('div');
+                        content.className = 'section-content';
+                        content.innerHTML = value.toString().replace(/\n/g, '<br>');
+                        sectionDiv.appendChild(content);
                     }
                     
-                    sectionElement.appendChild(titleElement);
-                    sectionElement.appendChild(contentElement);
-                    drugSummary.appendChild(sectionElement);
+                    drugContent.appendChild(sectionDiv);
                 }
             }
         });
         
-        // Добавляем краткую информацию в содержимое
-        drugContent.appendChild(drugSummary);
-        
-        // Показываем кнопку "Сообщить об ошибке"
+        // Показываем кнопку для сообщения об ошибке
         if (reportErrorBtn) {
-            reportErrorBtn.style.display = 'flex';
-            reportErrorBtn.classList.add('visible');
+            reportErrorBtn.style.display = 'block';
         }
-        
-        console.log('Информация о препарате успешно отображена');
     }
 
     // Глобальная функция-обертка для displayDrugInfo

@@ -3,147 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Справочник препаратов</title>
+    <title>Поиск ветеринарных препаратов</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="app">
-        <div class="container">
-            <div class="logo-container">
-                <button id="backButton" class="back-button" style="display: none;">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M19 12H5M12 19l-7-7 7-7"/>
-                    </svg>
-                </button>
-                <div class="app-header">
-                    <svg class="pill-icon" viewBox="0 0 24 24" width="24" height="24">
-                        <path d="M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                        <path d="M7 8h10"></path>
-                        <path d="M7 12h10"></path>
-                        <path d="M7 16h6"></path>
-                    </svg>
-                    Справочник лекарственных препаратов
+    <div class="container">
+        <div class="logo-container">
+            <button id="backButton" class="back-button" style="display: none;">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <div class="app-header">
+                <svg class="pill-icon" viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    <path d="M7 8h10"></path>
+                    <path d="M7 12h10"></path>
+                    <path d="M7 16h6"></path>
+                </svg>
+                Справочник ветеринарных препаратов
+            </div>
+        </div>
+
+        <div class="search-section">
+            <input type="text" id="searchInput" placeholder="Введите название препарата..." class="search-input">
+            <button class="search-button">Найти</button>
+        </div>
+
+        <div id="loading" class="loading-message">
+            <span>Загрузка данных...</span>
+        </div>
+
+        <div id="error" class="error-message"></div>
+
+        <div id="confirmation-section" class="confirmation-section" style="display: none;">
+            <div class="confirmation-title">Выберите препарат:</div>
+            <div id="drug-options" class="drug-options"></div>
+        </div>
+
+        <div id="results" class="results-section" style="display: none;">
+            <div class="categories-section">
+                <div class="categories-title">Выберите категории информации:</div>
+                <div class="categories-grid">
+                    <label class="category-item">
+                        <input type="checkbox" value="Общая информация">
+                        <div class="check">
+                            <svg width="18px" height="18px" viewBox="0 0 18 18">
+                                <path d="M1 9L1 9c0-5 3-8 8-8L9 1C14 1 17 5 17 9L17 9c0 4-4 8-8 8L9 17C5 17 1 14 1 9L1 9Z"></path>
+                                <polyline points="1 9 7 14 15 4"></polyline>
+                            </svg>
+                        </div>
+                        <span class="category-text">Общая информация</span>
+                    </label>
+                    <label class="category-item">
+                        <input type="checkbox" value="Состав">
+                        <div class="check">
+                            <svg width="18px" height="18px" viewBox="0 0 18 18">
+                                <path d="M1 9L1 9c0-5 3-8 8-8L9 1C14 1 17 5 17 9L17 9c0 4-4 8-8 8L9 17C5 17 1 14 1 9L1 9Z"></path>
+                                <polyline points="1 9 7 14 15 4"></polyline>
+                            </svg>
+                        </div>
+                        <span class="category-text">Состав</span>
+                    </label>
+                    <label class="category-item">
+                        <input type="checkbox" value="Фармакология">
+                        <div class="check">
+                            <svg width="18px" height="18px" viewBox="0 0 18 18">
+                                <path d="M1 9L1 9c0-5 3-8 8-8L9 1C14 1 17 5 17 9L17 9c0 4-4 8-8 8L9 17C5 17 1 14 1 9L1 9Z"></path>
+                                <polyline points="1 9 7 14 15 4"></polyline>
+                            </svg>
+                        </div>
+                        <span class="category-text">Фармакология</span>
+                    </label>
+                    <label class="category-item">
+                        <input type="checkbox" value="Применение">
+                        <div class="check">
+                            <svg width="18px" height="18px" viewBox="0 0 18 18">
+                                <path d="M1 9L1 9c0-5 3-8 8-8L9 1C14 1 17 5 17 9L17 9c0 4-4 8-8 8L9 17C5 17 1 14 1 9L1 9Z"></path>
+                                <polyline points="1 9 7 14 15 4"></polyline>
+                            </svg>
+                        </div>
+                        <span class="category-text">Применение</span>
+                    </label>
+                    <label class="category-item">
+                        <input type="checkbox" value="Дозировка">
+                        <div class="check">
+                            <svg width="18px" height="18px" viewBox="0 0 18 18">
+                                <path d="M1 9L1 9c0-5 3-8 8-8L9 1C14 1 17 5 17 9L17 9c0 4-4 8-8 8L9 17C5 17 1 14 1 9L1 9Z"></path>
+                                <polyline points="1 9 7 14 15 4"></polyline>
+                            </svg>
+                        </div>
+                        <span class="category-text">Дозировка</span>
+                    </label>
+                    <label class="category-item">
+                        <input type="checkbox" value="Безопасность">
+                        <div class="check">
+                            <svg width="18px" height="18px" viewBox="0 0 18 18">
+                                <path d="M1 9L1 9c0-5 3-8 8-8L9 1C14 1 17 5 17 9L17 9c0 4-4 8-8 8L9 17C5 17 1 14 1 9L1 9Z"></path>
+                                <polyline points="1 9 7 14 15 4"></polyline>
+                            </svg>
+                        </div>
+                        <span class="category-text">Безопасность</span>
+                    </label>
+                    <label class="category-item">
+                        <input type="checkbox" value="Хранение">
+                        <div class="check">
+                            <svg width="18px" height="18px" viewBox="0 0 18 18">
+                                <path d="M1 9L1 9c0-5 3-8 8-8L9 1C14 1 17 5 17 9L17 9c0 4-4 8-8 8L9 17C5 17 1 14 1 9L1 9Z"></path>
+                                <polyline points="1 9 7 14 15 4"></polyline>
+                            </svg>
+                        </div>
+                        <span class="category-text">Хранение</span>
+                    </label>
+                    <label class="category-item">
+                        <input type="checkbox" value="Регистрационная информация">
+                        <div class="check">
+                            <svg width="18px" height="18px" viewBox="0 0 18 18">
+                                <path d="M1 9L1 9c0-5 3-8 8-8L9 1C14 1 17 5 17 9L17 9c0 4-4 8-8 8L9 17C5 17 1 14 1 9L1 9Z"></path>
+                                <polyline points="1 9 7 14 15 4"></polyline>
+                            </svg>
+                        </div>
+                        <span class="category-text">Регистрационная информация</span>
+                    </label>
+                </div>
+                <div class="categories-controls">
+                    <button id="selectAllCategories" class="control-button">Выбрать все</button>
+                    <button id="clearCategories" class="control-button">Очистить</button>
                 </div>
             </div>
-            <div class="search-section">
-                <input type="text" id="searchInput" placeholder="Введите название препарата..." class="search-input">
-                <button class="search-button">Найти</button>
-            </div>
-
-            <div id="loading" class="loading-message">
-                <span>Загрузка данных...</span>
-            </div>
-
-            <div id="error" class="error-message"></div>
-
-            <div id="confirmation-section" class="confirmation-section" style="display: none;">
-                <div class="confirmation-title">Выберите препарат:</div>
-                <div id="drug-options" class="drug-options" style="display: block; max-height: 500px; overflow-y: auto; border-radius: 8px;"></div>
-            </div>
-
-            <div id="results" class="results-section" style="display: none;">
-                <div id="drug-info" class="drug-info-container" style="display: none;">
-                    <div class="categories-section">
-                        <div class="categories-title">Выберите категории информации:</div>
-                        <div class="categories-grid">
-                            <label class="category-item">
-                                <input type="checkbox" id="Фармакотерапевтическая группа" name="category" value="Фармакотерапевтическая группа" style="display: none;">
-                                <label for="Фармакотерапевтическая группа" class="check">
-                                    <svg width="18px" height="18px" viewBox="0 0 18 18">
-                                        <path d="M 1 9 L 1 9 c 0 -5 3 -8 8 -8 L 9 1 C 14 1 17 5 17 9 L 17 9 c 0 4 -4 8 -8 8 L 9 17 C 5 17 1 14 1 9 L 1 9 Z"></path>
-                                        <polyline points="1 9 7 14 15 4"></polyline>
-                                    </svg>
-                                </label>
-                                <span class="category-text">Фармакотерапевтическая группа</span>
-                            </label>
-                            <label class="category-item">
-                                <input type="checkbox" id="Показания" name="category" value="Показания" style="display: none;">
-                                <label for="Показания" class="check">
-                                    <svg width="18px" height="18px" viewBox="0 0 18 18">
-                                        <path d="M 1 9 L 1 9 c 0 -5 3 -8 8 -8 L 9 1 C 14 1 17 5 17 9 L 17 9 c 0 4 -4 8 -8 8 L 9 17 C 5 17 1 14 1 9 L 1 9 Z"></path>
-                                        <polyline points="1 9 7 14 15 4"></polyline>
-                                    </svg>
-                                </label>
-                                <span class="category-text">Показания</span>
-                            </label>
-                            <label class="category-item">
-                                <input type="checkbox" id="Побочные эффекты" name="category" value="Побочные эффекты" style="display: none;">
-                                <label for="Побочные эффекты" class="check">
-                                    <svg width="18px" height="18px" viewBox="0 0 18 18">
-                                        <path d="M 1 9 L 1 9 c 0 -5 3 -8 8 -8 L 9 1 C 14 1 17 5 17 9 L 17 9 c 0 4 -4 8 -8 8 L 9 17 C 5 17 1 14 1 9 L 1 9 Z"></path>
-                                        <polyline points="1 9 7 14 15 4"></polyline>
-                                    </svg>
-                                </label>
-                                <span class="category-text">Побочные эффекты</span>
-                            </label>
-                            <label class="category-item">
-                                <input type="checkbox" id="Противопоказания" name="category" value="Противопоказания" style="display: none;">
-                                <label for="Противопоказания" class="check">
-                                    <svg width="18px" height="18px" viewBox="0 0 18 18">
-                                        <path d="M 1 9 L 1 9 c 0 -5 3 -8 8 -8 L 9 1 C 14 1 17 5 17 9 L 17 9 c 0 4 -4 8 -8 8 L 9 17 C 5 17 1 14 1 9 L 1 9 Z"></path>
-                                        <polyline points="1 9 7 14 15 4"></polyline>
-                                    </svg>
-                                </label>
-                                <span class="category-text">Противопоказания</span>
-                            </label>
-                            <label class="category-item">
-                                <input type="checkbox" id="Состав" name="category" value="Состав" style="display: none;">
-                                <label for="Состав" class="check">
-                                    <svg width="18px" height="18px" viewBox="0 0 18 18">
-                                        <path d="M 1 9 L 1 9 c 0 -5 3 -8 8 -8 L 9 1 C 14 1 17 5 17 9 L 17 9 c 0 4 -4 8 -8 8 L 9 17 C 5 17 1 14 1 9 L 1 9 Z"></path>
-                                        <polyline points="1 9 7 14 15 4"></polyline>
-                                    </svg>
-                                </label>
-                                <span class="category-text">Состав</span>
-                            </label>
-                            <label class="category-item">
-                                <input type="checkbox" id="Условия отпуска" name="category" value="Условия отпуска" style="display: none;">
-                                <label for="Условия отпуска" class="check">
-                                    <svg width="18px" height="18px" viewBox="0 0 18 18">
-                                        <path d="M 1 9 L 1 9 c 0 -5 3 -8 8 -8 L 9 1 C 14 1 17 5 17 9 L 17 9 c 0 4 -4 8 -8 8 L 9 17 C 5 17 1 14 1 9 L 1 9 Z"></path>
-                                        <polyline points="1 9 7 14 15 4"></polyline>
-                                    </svg>
-                                </label>
-                                <span class="category-text">Условия отпуска</span>
-                            </label>
-                            <label class="category-item">
-                                <input type="checkbox" id="Хранение" name="category" value="Хранение" style="display: none;">
-                                <label for="Хранение" class="check">
-                                    <svg width="18px" height="18px" viewBox="0 0 18 18">
-                                        <path d="M 1 9 L 1 9 c 0 -5 3 -8 8 -8 L 9 1 C 14 1 17 5 17 9 L 17 9 c 0 4 -4 8 -8 8 L 9 17 C 5 17 1 14 1 9 L 1 9 Z"></path>
-                                        <polyline points="1 9 7 14 15 4"></polyline>
-                                    </svg>
-                                </label>
-                                <span class="category-text">Хранение</span>
-                            </label>
-                            <label class="category-item">
-                                <input type="checkbox" id="Дозировка" name="category" value="Дозировка" style="display: none;">
-                                <label for="Дозировка" class="check">
-                                    <svg width="18px" height="18px" viewBox="0 0 18 18">
-                                        <path d="M 1 9 L 1 9 c 0 -5 3 -8 8 -8 L 9 1 C 14 1 17 5 17 9 L 17 9 c 0 4 -4 8 -8 8 L 9 17 C 5 17 1 14 1 9 L 1 9 Z"></path>
-                                        <polyline points="1 9 7 14 15 4"></polyline>
-                                    </svg>
-                                </label>
-                                <span class="category-text">Дозировка</span>
-                            </label>
-                            <label class="category-item">
-                                <input type="checkbox" id="Регистрационная информация" name="category" value="Регистрационная информация" style="display: none;">
-                                <label for="Регистрационная информация" class="check">
-                                    <svg width="18px" height="18px" viewBox="0 0 18 18">
-                                        <path d="M 1 9 L 1 9 c 0 -5 3 -8 8 -8 L 9 1 C 14 1 17 5 17 9 L 17 9 c 0 4 -4 8 -8 8 L 9 17 C 5 17 1 14 1 9 L 1 9 Z"></path>
-                                        <polyline points="1 9 7 14 15 4"></polyline>
-                                    </svg>
-                                </label>
-                                <span class="category-text">Регистрационная информация</span>
-                            </label>
-                        </div>
-                        <div class="categories-controls">
-                            <button id="selectAllCategories" class="control-button">Выбрать все</button>
-                            <button id="clearCategories" class="control-button">Очистить</button>
-                        </div>
-                    </div>
-                    <div id="drug-content"></div>
-                </div>
+            <div id="drug-info" class="drug-info-container" style="display: none;">
+                <div id="drug-content"></div>
             </div>
         </div>
     </div>
@@ -175,20 +164,6 @@
         </div>
     </div>
 
-    <!-- Подключаем скрипт Telegram WebApp -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Подключаем наш основной скрипт -->
     <script src="app.v2.js"></script>
-
-    <div id="drugInfoModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title" id="drugInfoTitle">Информация о препарате</div>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="modal-body" id="drugInfoContent"></div>
-        </div>
-    </div>
 </body>
 </html> 
