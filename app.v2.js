@@ -116,12 +116,19 @@ function setupEventHandlers() {
             event.preventDefault();
             startSearch();
         });
+    } else {
+        if (!searchInput) console.error('searchInput не найден!');
+        if (!searchButton) console.error('searchButton не найден!');
     }
     if (backButton) {
         backButton.addEventListener('click', goBack);
+    } else {
+        console.error('backButton не найден!');
     }
     if (reportErrorBtn) {
         reportErrorBtn.addEventListener('click', reportError);
+    } else {
+        console.error('reportErrorBtn не найден!');
     }
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -137,6 +144,28 @@ function setupEventHandlers() {
     if (errorModal) errorModal.addEventListener('click', (e) => { if (e.target.id === 'errorModal') closeErrorModal(); });
     const errorForm = safeGetById('errorForm');
     if (errorForm) errorForm.addEventListener('submit', (e) => { e.preventDefault(); sendErrorReport(); });
+
+    // Исправленный обработчик для поиска с подсказками
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            clearTimeout(searchTimeout);
+            if (!query) {
+                if (drugOptions) drugOptions.style.display = 'none';
+                return;
+            }
+            // (автопоиск закомментирован)
+        });
+    }
+    // Скрытие предложений при клике вне блока
+    if (drugOptions && searchInput) {
+        document.addEventListener('click', (e) => {
+            if (!drugOptions.contains(e.target) && e.target !== searchInput) {
+                drugOptions.style.display = 'none';
+            }
+        });
+    }
 }
 
 // Настраиваем тему в зависимости от темы Telegram
