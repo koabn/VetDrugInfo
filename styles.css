@@ -2051,4 +2051,38 @@ html {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+.drug-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.drug-item {
+    background: var(--tg-theme-bg-color, #ffffff);
+    border: 1px solid var(--tg-theme-hint-color, #999999);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.drug-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.drug-name {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--tg-theme-text-color, #000000);
+    margin: 0 0 0.5rem 0;
+}
+
+.drug-item-body {
+    font-size: 0.9rem;
+    color: var(--tg-theme-hint-color, #999999);
+    margin-top: 0.5rem;
 } 
