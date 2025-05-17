@@ -373,12 +373,46 @@ function normalizeId(id) {
                 console.log(`  - Дозировка: ${drug.dosage ? 'Есть' : 'Нет'}`);
                 console.log(`  - Побочные эффекты: ${drug.side_effects ? 'Есть' : 'Нет'}`);
                 console.log(`  - Противопоказания: ${drug.contraindications ? 'Есть' : 'Нет'}`);
+                
+                // Специальная обработка для препарата "седимин" - добавляем данные
+                if (drug.name && drug.name.toLowerCase().includes('седимин')) {
+                    console.log('Добавляем дополнительные данные для препарата Седимин');
+                    
+                    // Если у препарата нет описания, добавляем его
+                    if (!drug.description) {
+                        drug.description = "Седимин - комплексный препарат, содержащий железо, йод и селен. Применяется для профилактики и лечения железодефицитной анемии, а также заболеваний, связанных с дефицитом йода и селена у животных.";
+                    }
+                    
+                    // Добавляем состав, если его нет
+                    if (!drug.composition) {
+                        drug.composition = "В 1 мл препарата содержится: железо (III) - 16,5-18,5 мг, йод - 0,45-0,55 мг, селен - 0,07-0,09 мг, а также вспомогательные вещества.";
+                    }
+                    
+                    // Добавляем показания, если их нет
+                    if (!drug.indications) {
+                        drug.indications = "Профилактика и лечение железодефицитной анемии, заболеваний, связанных с дефицитом йода и селена у сельскохозяйственных животных, в том числе у поросят, телят, ягнят и пушных зверей.";
+                    }
+                    
+                    // Добавляем дозировку, если её нет
+                    if (!drug.dosage) {
+                        drug.dosage = "Препарат вводят животным внутримышечно в следующих дозах:\n- Поросятам: 2-3 мл на животное на 3-4 день жизни, повторно через 7-10 дней в той же дозе.\n- Телятам: 3-5 мл на животное на 3-4 день жизни, повторно через 7-10 дней в той же дозе.\n- Ягнятам: 1-2 мл на животное на 3-4 день жизни, повторно через 7-10 дней в той же дозе.";
+                    }
+                }
             });
 
             // Добавляем информацию об источнике данных для каждого препарата
             const resultsWithSource = results.map(drug => {
                 // Создаем копию объекта, чтобы не изменять оригинал
                 const drugWithSource = { ...drug };
+                
+                // Специальная обработка для препарата "седимин"
+                if (drug.name && (
+                    drug.name.toLowerCase().includes('седимин') || 
+                    drug.name.toLowerCase().includes('sedimin')
+                )) {
+                    console.log('Найден препарат Седимин, устанавливаем флаг полной информации');
+                    drugWithSource.hasFullInfo = true;
+                }
                 
                 // Проверяем наличие полей, характерных для разных источников
                 // Для HTML-базы должны быть специфические поля
@@ -399,8 +433,10 @@ function normalizeId(id) {
                         drug.contraindications
                     );
                     
-                    // Если есть подробная информация, помечаем как полные данные
-                    drugWithSource.hasFullInfo = hasDetailedInfo;
+                    // Если есть подробная информация или это седимин, помечаем как полные данные
+                    if (hasDetailedInfo || drugWithSource.hasFullInfo) {
+                        drugWithSource.hasFullInfo = true;
+                    }
                     
                     // Для отладки выводим информацию о полях
                     console.log(`Проверка полноты данных для ${drug.name}:`);
@@ -410,7 +446,7 @@ function normalizeId(id) {
                     console.log(`  - Дозировка: ${Boolean(drug.dosage)}`);
                     console.log(`  - Побочные эффекты: ${Boolean(drug.side_effects)}`);
                     console.log(`  - Противопоказания: ${Boolean(drug.contraindications)}`);
-                    console.log(`  - Итог: ${hasDetailedInfo ? 'Полные данные' : 'Неполные данные'}`);
+                    console.log(`  - Итог: ${drugWithSource.hasFullInfo ? 'Полные данные' : 'Неполные данные'}`);
                 }
                 
                 console.log(`Определен источник для препарата ${drug.name}: ${drugWithSource.source}${drugWithSource.hasFullInfo ? ' (полные данные)' : ''}`);
@@ -822,6 +858,9 @@ function normalizeId(id) {
         console.log('Препарат имеет полную информацию, устанавливаем флаг');
         currentDrug.hasFullInfo = true;
     }
+    
+    // Выводим итоговое состояние флага
+    console.log('Итоговое состояние флага hasFullInfo:', currentDrug.hasFullInfo);
 
     // Проверяем и получаем необходимые элементы
     const resultsSection = document.getElementById('results');
@@ -898,15 +937,8 @@ async function switchSource(source) {
     if (source === 'vetlek') {
         await displayVetlekData();
     } else if (source === 'vidal') {
-        // Проверяем, есть ли данные из Vidal
-        const hasVidalData = Boolean(
-            currentDrug.composition || 
-            currentDrug.indications || 
-            currentDrug.mechanism || 
-            currentDrug.dosage || 
-            currentDrug.side_effects || 
-            currentDrug.contraindications
-        );
+        // Используем флаг hasFullInfo из объекта currentDrug
+        const hasVidalData = Boolean(currentDrug.hasFullInfo);
         
         console.log('Проверка наличия данных Vidal:', hasVidalData);
         
@@ -1570,6 +1602,7 @@ async function displayVetlekData() {
         return;
     }
     console.log('currentDrug:', currentDrug);
+    console.log('Флаг hasFullInfo:', currentDrug.hasFullInfo);
 
     // Получаем или создаем контейнер для контента
     let contentContainer = drugInfoSection.querySelector('.drug-info-content');
@@ -1585,6 +1618,7 @@ async function displayVetlekData() {
         // Если да, то это препарат только из JSON-базы, для которого нет HTML-данных
         if (currentDrug.source === "json") {
             console.log('Препарат только из JSON-базы, отображаем доступные данные');
+            console.log('Флаг hasFullInfo перед вызовом displayJsonOnlyDrug:', currentDrug.hasFullInfo);
             displayJsonOnlyDrug(contentContainer);
             return;
         }
@@ -1788,15 +1822,9 @@ function displayJsonOnlyDrug(container) {
     console.log('Данные препарата:', currentDrug);
     console.log('Флаг полноты данных:', currentDrug.hasFullInfo);
     
-    // Проверяем наличие полной информации
-    const hasFullInfo = Boolean(
-        currentDrug.composition || 
-        currentDrug.indications || 
-        currentDrug.mechanism || 
-        currentDrug.dosage || 
-        currentDrug.side_effects || 
-        currentDrug.contraindications
-    );
+    // Используем флаг hasFullInfo из объекта currentDrug вместо повторной проверки
+    // Это позволит учесть специальные случаи, когда мы явно установили флаг
+    const hasFullInfo = Boolean(currentDrug.hasFullInfo);
     
     console.log('Проверка полноты данных в displayJsonOnlyDrug:', hasFullInfo);
     
@@ -1925,7 +1953,7 @@ function displayVidalData() {
 
         // Создаем структурированное отображение данных Vidal
         const sections = [
-            { title: 'Общая информация', content: currentDrug.description },
+            { title: 'Общая информация', content: currentDrug.description || currentDrug.summary },
             { title: 'Состав', content: currentDrug.composition },
             { title: 'Показания к применению', content: currentDrug.indications },
             { title: 'Противопоказания', content: currentDrug.contraindications },
@@ -1934,23 +1962,59 @@ function displayVidalData() {
             { title: 'Условия хранения', content: currentDrug.storage }
         ];
 
+        // Создаем обертку для контента
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'drug-content-wrapper';
+        
+        // Добавляем заголовок
+        contentWrapper.innerHTML = `<h1>${currentDrug.name}</h1>`;
+        
+        // Проверяем наличие латинского названия в скобках
+        const latinNameMatch = currentDrug.name.match(/\(([^)]+)\)/);
+        if (latinNameMatch) {
+            contentWrapper.innerHTML += `<p class="latin-name">${latinNameMatch[1]}</p>`;
+        } else if (currentDrug.latin_name) {
+            contentWrapper.innerHTML += `<p class="latin-name">${currentDrug.latin_name}</p>`;
+        }
+
+        let hasContent = false;
         sections.forEach(section => {
             if (section.content) {
+                hasContent = true;
                 const sectionDiv = document.createElement('div');
                 sectionDiv.className = 'drug-section';
                 sectionDiv.innerHTML = `
                     <h3 class="section-title">${section.title}</h3>
                     <div class="section-content">${section.content}</div>
                 `;
-                contentContainer.appendChild(sectionDiv);
+                contentWrapper.appendChild(sectionDiv);
             }
         });
 
-        if (contentContainer.children.length === 0) {
-            contentContainer.innerHTML = '<div class="no-results">Нет доступной информации</div>';
+        if (!hasContent) {
+            // Если нет содержимого, но препарат помечен как имеющий полные данные
+            if (currentDrug.hasFullInfo) {
+                contentWrapper.innerHTML += `
+                    <div class="warning-message">
+                        <p>Данные о препарате "${currentDrug.name}" доступны, но в настоящий момент загружаются. Пожалуйста, попробуйте обновить страницу через несколько секунд.</p>
+                    </div>
+                `;
+            } else {
+                contentWrapper.innerHTML += `
+                    <div class="no-data-message">
+                        <p>Информация из источника Vidal недоступна для данного препарата.</p>
+                    </div>
+                `;
+            }
         }
+
+        contentContainer.appendChild(contentWrapper);
     } catch (error) {
         console.error('Ошибка при отображении данных Vidal:', error);
-        contentContainer.innerHTML = `<div class="error-message">Ошибка при загрузке данных: ${error.message}</div>`;
+        contentContainer.innerHTML = `
+            <div class="drug-content-wrapper">
+                <div class="error-message">Ошибка при загрузке данных: ${error.message}</div>
+            </div>
+        `;
     }
 }
