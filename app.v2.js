@@ -689,41 +689,182 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Глобальная функция-обертка для displayDrugInfo
     async function displayDrugInfo_global(drug) {
-        try {
-            showLoadingMessage('Загрузка информации о препарате...');
-            
-            // Загружаем HTML файл, если он еще не загружен
-            if (!window.drugsHtml) {
-                const response = await fetch('api/all_drugs.html');
-                if (!response.ok) {
-                    throw new Error('Не удалось загрузить данные препаратов');
-                }
-                window.drugsHtml = await response.text();
-            }
-            
-            // Создаем временный div для парсинга HTML
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = window.drugsHtml;
-            
-            // Находим статью с нужным ID
-            const article = tempDiv.querySelector(`article#${drug.id}`);
-            if (!article) {
-                throw new Error('Препарат не найден');
-            }
-            
-            // Отображаем информацию
-            const drugInfoContainer = document.getElementById('drug-info');
-            drugInfoContainer.innerHTML = article.innerHTML;
-            
-            // Показываем контейнер
-            drugInfoContainer.style.display = 'block';
-            
-            hideLoadingMessage();
-        } catch (error) {
-            console.error('Ошибка при отображении информации о препарате:', error);
-            showErrorMessage('Не удалось загрузить информацию о препарате');
-            hideLoadingMessage();
+        if (!drug) {
+            console.error('Нет данных о препарате для отображения');
+            return;
         }
+
+        showLoadingMessage('Загрузка информации о препарате...');
+
+        // Показываем секцию с результатами
+        const resultsSection = document.getElementById('results');
+        if (resultsSection) {
+            resultsSection.style.display = 'block';
+            resultsSection.classList.add('visible');
+        }
+
+        // Получаем контейнер для информации о препарате
+        const drugInfo = document.getElementById('drug-info');
+        if (!drugInfo) {
+            console.error('Не найден контейнер drug-info');
+            return;
+        }
+
+        // Очищаем контейнер
+        drugInfo.innerHTML = '';
+
+        // Создаем переключатель источников
+        const sourceSelector = document.createElement('div');
+        sourceSelector.className = 'source-selector';
+        
+        const sourceLabel = document.createElement('div');
+        sourceLabel.className = 'source-label';
+        sourceLabel.textContent = 'Источник:';
+        sourceSelector.appendChild(sourceLabel);
+
+        // Создаем контейнер для контента
+        const contentContainer = document.createElement('div');
+        contentContainer.className = 'drug-info-content';
+        
+        // Функция для очистки HTML от изображений
+        function cleanHtmlFromImages(html) {
+            if (!html) return '';
+            
+            // Создаем временный div для работы с HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            
+            // Удаляем все изображения
+            tempDiv.querySelectorAll('img').forEach(img => img.remove());
+            
+            // Удаляем все ссылки на изображения
+            tempDiv.querySelectorAll('a').forEach(link => {
+                const href = link.getAttribute('href');
+                if (href && /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(href)) {
+                    link.remove();
+                }
+            });
+            
+            return tempDiv.innerHTML;
+        }
+
+        // Обновляем функцию displayVetlekData
+        const displayVetlekData = async () => {
+            try {
+                // Загружаем HTML файл, если он еще не загружен
+                if (!window.drugsHtml) {
+                    const response = await fetch('api/all_drugs.html');
+                    if (!response.ok) {
+                        throw new Error(`Ошибка загрузки данных VetLek: ${response.status}`);
+                    }
+                    window.drugsHtml = await response.text();
+                }
+
+                // Ищем статью с нужным id
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(window.drugsHtml, 'text/html');
+                const article = doc.querySelector(`article[data-id="${drug.id}"]`);
+
+                if (!article) {
+                    throw new Error('Информация о препарате не найдена в базе VetLek');
+                }
+
+                // Очищаем контейнер
+                contentContainer.innerHTML = '';
+                contentContainer.className = 'drug-info-content vetlek-source';
+
+                // Очищаем HTML от изображений и добавляем в контейнер
+                contentContainer.innerHTML = cleanHtmlFromImages(article.innerHTML);
+            } catch (error) {
+                console.error('Ошибка при загрузке данных VetLek:', error);
+                contentContainer.innerHTML = `<div class="error-message">Ошибка при загрузке данных: ${error.message}</div>`;
+            }
+        };
+
+        // Функция для отображения данных из Vidal
+        const displayVidalData = () => {
+            try {
+                contentContainer.className = 'drug-info-content vidal-source';
+                contentContainer.innerHTML = '';
+
+                // Создаем структурированное отображение данных Vidal
+                const sections = [
+                    { title: 'Общая информация', content: drug.description },
+                    { title: 'Состав', content: drug.composition },
+                    { title: 'Показания к применению', content: drug.indications },
+                    { title: 'Противопоказания', content: drug.contraindications },
+                    { title: 'Способ применения', content: drug.dosage },
+                    { title: 'Побочные эффекты', content: drug.side_effects },
+                    { title: 'Условия хранения', content: drug.storage }
+                ];
+
+                sections.forEach(section => {
+                    if (section.content) {
+                        const sectionDiv = document.createElement('div');
+                        sectionDiv.className = 'drug-section';
+                        sectionDiv.innerHTML = `
+                            <h3 class="section-title">${section.title}</h3>
+                            <div class="section-content">${section.content}</div>
+                        `;
+                        contentContainer.appendChild(sectionDiv);
+                    }
+                });
+
+                if (contentContainer.children.length === 0) {
+                    contentContainer.innerHTML = '<div class="no-results">Нет доступной информации</div>';
+                }
+            } catch (error) {
+                console.error('Ошибка при отображении данных Vidal:', error);
+                contentContainer.innerHTML = `<div class="error-message">Ошибка при загрузке данных: ${error.message}</div>`;
+            }
+        };
+
+        // Добавляем кнопки для каждого источника
+        const sources = [
+            { id: 'vetlek', name: 'VetLek', handler: displayVetlekData },
+            { id: 'vidal', name: 'Видаль', handler: displayVidalData }
+        ];
+
+        sources.forEach(source => {
+            const button = document.createElement('button');
+            button.className = 'toggle-source-btn';
+            button.textContent = source.name;
+            button.dataset.source = source.id;
+            
+            button.onclick = async () => {
+                // Обновляем активную кнопку
+                sourceSelector.querySelectorAll('.toggle-source-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                button.classList.add('active');
+
+                // Показываем индикатор загрузки
+                showLoadingMessage('Загрузка данных...');
+
+                // Загружаем данные из соответствующего источника
+                await source.handler();
+
+                // Скрываем индикатор загрузки
+                hideLoadingMessage();
+            };
+            
+            sourceSelector.appendChild(button);
+        });
+
+        // Добавляем элементы на страницу
+        drugInfo.appendChild(sourceSelector);
+        drugInfo.appendChild(contentContainer);
+        
+        // Показываем контейнер
+        drugInfo.style.display = 'block';
+
+        // Активируем первый источник по умолчанию
+        const firstButton = sourceSelector.querySelector('.toggle-source-btn');
+        if (firstButton) {
+            firstButton.click();
+        }
+
+        hideLoadingMessage();
     }
 
     function displayFilteredDrugs(filteredDrugs) {
