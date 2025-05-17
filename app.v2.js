@@ -145,19 +145,6 @@ function setupEventHandlers() {
     const errorForm = safeGetById('errorForm');
     if (errorForm) errorForm.addEventListener('submit', (e) => { e.preventDefault(); sendErrorReport(); });
 
-    // Исправленный обработчик для поиска с подсказками
-    if (searchInput) {
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            const query = e.target.value.trim();
-            clearTimeout(searchTimeout);
-            if (!query) {
-                if (drugOptions) drugOptions.style.display = 'none';
-                return;
-            }
-            // (автопоиск закомментирован)
-        });
-    }
     // Скрытие предложений при клике вне блока
     if (drugOptions && searchInput) {
         document.addEventListener('click', (e) => {
@@ -867,69 +854,6 @@ document.addEventListener('keydown', function(event) {
         if (modal.style.display === 'flex') {
             modal.style.display = 'none';
         }
-    }
-});
-
-// Добавляем обработчик ввода для поиска с подсказками
-let searchTimeout;
-searchInput.addEventListener('input', (e) => {
-    const query = e.target.value.trim();
-    
-    // Очищаем предыдущий таймаут
-    clearTimeout(searchTimeout);
-    
-    // Если запрос пустой, скрываем блок предложений
-    if (!query) {
-        drugOptions.style.display = 'none';
-        return;
-    }
-    
-    // При вводе поиск не выполняется автоматически
-    // Комментируем код автоматического поиска
-    /*
-    // Устанавливаем таймаут для предотвращения частых запросов
-    searchTimeout = setTimeout(() => {
-        // Используем локальные данные вместо запроса к API
-        if (drugsData && drugsData.length > 0) {
-            const lowerQuery = query.toLowerCase();
-            const results = drugsData.filter(drug => {
-                // Проверяем наличие названия препарата
-                const hasName = drug.name && typeof drug.name === 'string';
-                if (hasName && drug.name.toLowerCase().includes(lowerQuery)) {
-                    return true;
-                }
-                
-                // Проверяем наличие активных веществ
-                if (drug.active_ingredients && Array.isArray(drug.active_ingredients)) {
-                    return drug.active_ingredients.some(ingredient => 
-                        ingredient.toLowerCase().includes(lowerQuery)
-                    );
-                }
-                
-                return false;
-            }).slice(0, 20); // Ограничиваем 20 результатами
-            
-            if (results.length > 0) {
-                // Показываем блок предложений
-                drugOptions.style.display = 'block';
-                // Отображаем найденные препараты
-                showDrugOptions(results);
-            } else {
-                // Если ничего не найдено, скрываем блок
-                drugOptions.style.display = 'none';
-            }
-        } else {
-            console.warn('Данные препаратов не загружены');
-            drugOptions.style.display = 'none';
-        }
-    }, 300); // Задержка в 300 мс
-    */
-});
-
-// Скрытие предложений при клике вне блока
-document.addEventListener('click', (e) => {
-    if (!drugOptions.contains(e.target) && e.target !== searchInput) {
-        drugOptions.style.display = 'none';
     }
 });
 
