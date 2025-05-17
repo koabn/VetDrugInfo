@@ -214,14 +214,13 @@ function safeGetById(id) {
         drugInfo.style.display = 'none';
         drugInfo.classList.remove('visible');
     }
-
-    // Показываем результаты поиска
-    const resultsSection = document.getElementById('results');
+    // Показываем поиск и результаты
+    const searchSection = document.querySelector('.search-section');
+    if (searchSection) searchSection.style.display = 'flex';
     if (resultsSection) {
         resultsSection.style.display = 'block';
         resultsSection.classList.add('visible');
     }
-
     // Скрываем кнопку "Назад"
     hideBackButton();
 }
@@ -256,11 +255,25 @@ function displayFilteredDrugs(results) {
     }
     results.forEach((item, idx) => {
         const name = item.vetlek ? item.vetlek.name : item.vidal.name;
+        // Цвет и tooltip кружка только по источнику
+        const isVetlek = !!item.vetlek;
+        const circleColor = isVetlek ? 'green' : 'orange';
+        const circleTitle = isVetlek
+            ? 'Инструкция из VetLek (таблицы дозировок обычно есть)'
+            : 'Инструкция из Vidal (таблиц дозировок нет)';
+        const circleHtml = `<span class="drug-source-circle ${circleColor}" tabindex="0" data-tooltip="${circleTitle}"></span>`;
         const drugDiv = document.createElement('div');
         drugDiv.className = 'drug-option';
-        drugDiv.innerHTML = `<h3>${name}</h3>`;
-        drugDiv.addEventListener('click', () => {
+        drugDiv.innerHTML = `<h3>${name} ${circleHtml}</h3>`;
+        drugDiv.addEventListener('click', (e) => {
+            // Не открывать инфо, если клик по кружку
+            if (e.target.classList.contains('drug-source-circle')) return;
             showDrugInfoPage(item);
+        });
+        // Tooltip обработчик
+        drugDiv.querySelector('.drug-source-circle').addEventListener('click', function(e) {
+            e.stopPropagation();
+            showDrugSourceTooltip(this);
         });
         drugList.appendChild(drugDiv);
         setTimeout(() => drugDiv.classList.add('visible'), 10);
@@ -275,6 +288,31 @@ function displayFilteredDrugs(results) {
     }
 }
 
+// Показывает popover с пояснением к кружку
+function showDrugSourceTooltip(circleElem) {
+    // Удаляем старые popover
+    document.querySelectorAll('.drug-source-popover').forEach(el => el.remove());
+    const tooltipText = circleElem.getAttribute('data-tooltip');
+    const popover = document.createElement('div');
+    popover.className = 'drug-source-popover';
+    popover.textContent = tooltipText;
+    document.body.appendChild(popover);
+    // Позиционируем popover
+    const rect = circleElem.getBoundingClientRect();
+    popover.style.left = (rect.left + rect.width/2 - popover.offsetWidth/2) + 'px';
+    popover.style.top = (rect.bottom + 8) + 'px';
+    // Скрытие по клику вне
+    setTimeout(() => {
+        function hidePopover(e) {
+            if (!popover.contains(e.target) && e.target !== circleElem) {
+                popover.remove();
+                document.removeEventListener('mousedown', hidePopover);
+            }
+        }
+        document.addEventListener('mousedown', hidePopover);
+    }, 0);
+}
+
 // Показываем отдельную страницу с информацией о препарате
 function showDrugInfoPage(item) {
     // Скрываем поиск и результаты
@@ -286,6 +324,8 @@ function showDrugInfoPage(item) {
     }
     // Показываем инфоблок
     displayDrugInfoMulti(item);
+    // Показываем кнопку «Назад»
+    showBackButton();
 }
 
 // Отображение информации о препарате с двумя источниками
@@ -353,15 +393,22 @@ function renderDrugInfoContent(item, source) {
             }
         }
         // Таблица дозировки
+        let shownDosageTable = null;
         if (drug.dosage_table && Array.isArray(drug.dosage_table)) {
             contentDiv.innerHTML += '<h3>Дозировка (таблица)</h3>' + renderDosageTable(drug.dosage_table);
+            shownDosageTable = JSON.stringify(drug.dosage_table);
         }
-        // Другие таблицы
+        // Другие таблицы (исключаем уже показанную)
         if (drug.tables && Array.isArray(drug.tables) && drug.tables.length > 0) {
-            contentDiv.innerHTML += '<h3>Другие таблицы</h3>';
-            drug.tables.forEach(table => {
-                contentDiv.innerHTML += renderDosageTable(table);
-            });
+            const otherTables = shownDosageTable
+                ? drug.tables.filter(t => JSON.stringify(t) !== shownDosageTable)
+                : drug.tables;
+            if (otherTables.length > 0) {
+                contentDiv.innerHTML += '<h3>Другие таблицы</h3>';
+                otherTables.forEach(table => {
+                    contentDiv.innerHTML += renderDosageTable(table);
+                });
+            }
         }
     } else if (source === 'vidal') {
         // Vidal: старый формат

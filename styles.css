@@ -1651,28 +1651,30 @@ html {
     opacity: 0.9;
 }
 
-.drug-content-wrapper table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0;
-    background: var(--tg-theme-bg-color, #ffffff);
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+.drug-content-wrapper table,
+.drug-content-wrapper table th,
+.drug-content-wrapper table td {
+    border: 2px solid var(--accent-color, #4d8cff) !important;
+    border-collapse: collapse !important;
 }
 
-.drug-content-wrapper th,
-.drug-content-wrapper td {
-    padding: 12px;
-    text-align: left;
-    border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.1));
-    color: var(--tg-theme-text-color, #000000);
+.drug-content-wrapper table th,
+.drug-content-wrapper table td {
+    border-width: 1px !important;
+    border-style: solid !important;
+    border-color: var(--accent-color, #4d8cff) !important;
+    background: var(--secondary-bg-color, #232428) !important;
+    color: var(--text-color, #fff) !important;
+    padding: 12px 10px !important;
 }
 
-.drug-content-wrapper th {
-    background: var(--tg-theme-secondary-bg-color, #f5f5f5);
-    font-weight: 600;
-    white-space: nowrap;
+.drug-content-wrapper table th {
+    background: var(--accent-color, #4d8cff) !important;
+    color: #fff !important;
+}
+
+.drug-content-wrapper table tr:nth-child(even) td {
+    background: #232c3a !important;
 }
 
 /* Адаптивность для таблиц на мобильных устройствах */
@@ -1982,4 +1984,38 @@ html {
 .drug-content-wrapper td {
     color: var(--text-color, #fff) !important;
     background: var(--secondary-bg-color, #232428) !important;
+}
+
+.drug-source-circle {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin-left: 8px;
+    vertical-align: middle;
+    cursor: pointer;
+    box-shadow: 0 0 4px rgba(0,0,0,0.15);
+    border: 2px solid #222;
+    position: relative;
+}
+.drug-source-circle.green {
+    background: #2ecc40;
+    border-color: #2ecc40;
+}
+.drug-source-circle.orange {
+    background: #ff9800;
+    border-color: #ff9800;
+}
+.drug-source-popover {
+    position: absolute;
+    z-index: 9999;
+    background: #232428;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    font-size: 14px;
+    white-space: nowrap;
+    pointer-events: auto;
+    animation: fadeIn 0.2s;
 } 
