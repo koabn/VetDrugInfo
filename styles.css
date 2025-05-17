@@ -641,6 +641,7 @@ input[type="checkbox"]:checked + .category-text {
     opacity: 0;
     pointer-events: none;
     z-index: 2;
+    animation: pulse 2s infinite alternate;
 }
 
 .back-button.visible {
@@ -649,10 +650,17 @@ input[type="checkbox"]:checked + .category-text {
     pointer-events: auto;
 }
 
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 16px 0 rgba(77, 140, 255, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 32px 4px rgba(77, 140, 255, 0.6);
+    }
+}
+
 .back-button:hover {
-    transform: translateX(-50%) translateY(-2px) scale(1);
-    background: var(--accent-color-light);
-    box-shadow: 0 6px 16px rgba(74, 134, 232, 0.4);
+    opacity: 0.9;
 }
 
 .back-button:active {
@@ -1514,7 +1522,6 @@ html {
 }
 
 .back-button:hover {
-    transform: translateX(-3px);
     opacity: 0.9;
 }
 
@@ -1800,7 +1807,6 @@ html {
 
 .retry-button:hover {
     opacity: 0.9;
-    transform: translateY(-2px);
 }
 
 /* Стили для отображения списков в JSON-данных */
@@ -2018,4 +2024,24 @@ html {
     white-space: nowrap;
     pointer-events: auto;
     animation: fadeIn 0.2s;
+}
+
+.drug-source-legend {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 14px;
+    margin: 18px 0 8px 0;
+    flex-wrap: wrap;
+    color: var(--text-color, #fff);
+}
+.drug-source-legend .drug-source-circle {
+    margin-left: 0;
+    margin-right: 6px;
+    position: relative;
+    top: 2px;
+}
+.legend-label {
+    margin-right: 18px;
+    opacity: 0.85;
 } 
