@@ -57,10 +57,12 @@ body {
     margin: 0 auto;
     padding: 24px 16px;
     animation: fadeIn 0.3s ease;
+    position: relative;
+    min-height: 200px;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -201,95 +203,82 @@ body {
 }
 
 .drug-item {
+    background: var(--tg-theme-bg-color, #ffffff);
+    border: 1px solid var(--tg-theme-hint-color, #dddddd);
+    border-radius: 8px;
     padding: 15px;
     margin-bottom: 10px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.drug-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.drug-item-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    gap: 15px;
 }
 
-.drug-icons {
-    display: none; /* Скрываем блок для иконок */
+.drug-content {
+    flex: 1;
+    cursor: pointer;
+    padding: 5px;
 }
 
-.prescription-status-icon,
-.drug-type-icon {
-    display: none; /* Скрываем иконки */
-}
-
-/* Удаляем стили для различных иконок */
-.prescription-icon,
-.otc-icon,
-.injection-icon,
-.tablet-icon, 
-.liquid-icon,
-.external-icon {
-    display: none;
+.drug-content:hover .drug-name {
+    color: var(--tg-theme-button-color, #3390ec);
 }
 
 .drug-name {
-    font-weight: bold;
     font-size: 16px;
-    color: #333;
-    flex: 1;
+    font-weight: 500;
+    color: var(--tg-theme-text-color, #000000);
+    margin: 0 0 5px 0;
+    transition: color 0.2s ease;
 }
 
 .drug-item-body {
-    padding-left: 10px; /* Уменьшаем отступ, так как иконок больше нет */
-}
-
-.drug-active-ingredients {
     font-size: 14px;
-    color: #666;
-    margin-bottom: 5px;
+    color: var(--tg-theme-hint-color, #999999);
+    margin-top: 5px;
+    line-height: 1.4;
 }
 
-/* Медиа-запросы для адаптации карточек на мобильных устройствах */
-@media (max-width: 768px) {
-    .drug-item {
-        padding: 12px;
-    }
-    
-    .drug-name {
-        font-size: 15px;
-    }
-    
-    .drug-item-body {
-        padding-left: 10px;
-    }
-    
-    .drug-active-ingredients {
-        font-size: 13px;
-    }
+.view-drug-btn {
+    background-color: var(--tg-theme-button-color, #3390ec);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    margin: 0;
+    width: auto;
 }
 
+.view-drug-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.view-drug-btn:active {
+    transform: translateY(0);
+}
+
+/* Адаптивность для мобильных устройств */
 @media (max-width: 480px) {
     .drug-item {
         padding: 10px;
+        gap: 10px;
     }
-    
+
     .drug-name {
         font-size: 14px;
     }
-    
+
     .drug-item-body {
-        padding-left: 10px;
+        font-size: 12px;
     }
-    
-    .drug-active-ingredients {
+
+    .view-drug-btn {
+        padding: 6px 12px;
         font-size: 12px;
     }
 }
@@ -1180,7 +1169,7 @@ html {
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(20px);
     }
     to {
         opacity: 1;
@@ -1294,147 +1283,126 @@ html {
 }
 
 .drug-info-section {
-    margin-bottom: 24px;
+    display: none;
+    background: var(--tg-theme-bg-color, #ffffff);
+    border-radius: 8px;
+    margin-top: 20px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.drug-info-title {
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--tg-theme-text-color, #333);
-    font-size: 16px;
+.drug-info-section.visible {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.drug-header {
+    background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+    padding: 20px;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 1px solid var(--tg-theme-hint-color, #dddddd);
+}
+
+.drug-header h2 {
+    margin: 10px 0;
+    color: var(--tg-theme-text-color, #000000);
+    font-size: 1.5rem;
+    font-weight: 500;
 }
 
 .drug-info-content {
-    line-height: 1.5;
-    color: var(--text-color, #444);
-    font-size: 15px;
-    white-space: pre-line;
+    padding: 20px;
+    line-height: 1.6;
+    color: var(--tg-theme-text-color, #000000);
 }
 
-.no-results {
-    text-align: center;
-    padding: 30px;
-    color: var(--text-color, #666);
-    font-style: italic;
-}
-
-/* Новые стили из версии v2 */
-
-/* Общий контейнер для списка препаратов */
-#drug-options {
-    margin-top: 15px;
-    max-height: 500px;
-    overflow-y: auto;
-    border-radius: 8px;
-    display: none;
-}
-
-/* Стиль для опции препарата */
-.drug-option {
-    background-color: var(--secondary-bg-color);
-    border-radius: var(--border-radius);
-    margin-bottom: 10px;
-    padding: 15px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid var(--border-color);
-}
-
-.drug-option:hover {
-    background-color: var(--hover-bg-color);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-hover);
-}
-
-/* Стиль для заголовка опции препарата */
-.drug-option-title {
-    font-weight: 600;
-    font-size: 16px;
-    color: var(--accent-color);
-    margin-bottom: 5px;
-}
-
-/* Стиль для деталей опции препарата */
-.drug-option-details {
-    font-size: 14px;
-    color: var(--text-color);
-    opacity: var(--text-opacity-medium);
-    margin-top: 5px;
-}
-
-/* Заголовок препарата в информационном блоке */
-.drug-header {
+.source-selector {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--separator-color);
+    gap: 10px;
+    margin-top: 15px;
 }
 
-/* Кнопка подробной информации */
-.details-button {
-    background-color: var(--accent-color);
-    color: var(--text-color);
-    border: none;
-    border-radius: var(--border-radius-small);
+.source-button {
     padding: 8px 16px;
-    font-size: 14px;
+    border: 1px solid var(--tg-theme-button-color, #3390ec);
+    background: transparent;
+    color: var(--tg-theme-button-color, #3390ec);
+    border-radius: 6px;
     cursor: pointer;
-    transition: background-color 0.2s;
-    box-shadow: var(--shadow);
-}
-
-.details-button:hover {
-    background-color: var(--accent-color-light);
-    box-shadow: var(--shadow-hover);
-}
-
-/* Стили для краткой информации о препарате */
-.drug-summary {
-    margin-top: 10px;
-    font-size: 0.9rem;
-    color: #555;
-}
-
-.ingredients, .indications {
-    margin-bottom: 6px;
-}
-
-/* Стили для разделов информации о препарате */
-.drug-section {
-    padding: 16px;
-    background-color: var(--secondary-bg-color);
-    border-radius: var(--border-radius);
-    margin-bottom: 16px;
-    border-left: 4px solid var(--accent-color);
-    box-shadow: var(--shadow-light);
     transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.source-button:hover {
+    background: var(--tg-theme-button-color, #3390ec);
+    color: var(--tg-theme-button-text-color, #ffffff);
+}
+
+.source-button.active {
+    background: var(--tg-theme-button-color, #3390ec);
+    color: var(--tg-theme-button-text-color, #ffffff);
+}
+
+.drug-section {
+    margin-bottom: 20px;
+    padding: 0 20px;
 }
 
 .section-title {
-    font-size: 16px;
+    color: #2c3e50;
+    font-size: 18px;
+    margin-bottom: 10px;
     font-weight: 600;
-    color: var(--accent-color);
-    margin-bottom: 8px;
 }
 
 .section-content {
-    font-size: 15px;
-    line-height: 1.5;
-    color: var(--text-color);
-    white-space: pre-line;
+    color: #4a5568;
+    line-height: 1.6;
 }
 
-/* Сообщение о количестве результатов */
-.results-message {
-    margin-top: 10px;
-    padding: 10px;
-    background-color: var(--error-bg-color);
-    border-radius: var(--border-radius-small);
-    color: var(--error-color);
-    font-size: 14px;
-    border-left: 4px solid var(--error-color);
+.error-message {
+    color: #dc3545;
+    padding: 20px;
+    text-align: center;
+    font-size: 16px;
+}
+
+.no-results {
+    color: #6c757d;
+    padding: 20px;
+    text-align: center;
+    font-style: italic;
+}
+
+.drug-info-content {
+    padding: 20px 0;
+}
+
+.drug-info-content.vetlek-source article {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.drug-info-content.vetlek-source h1,
+.drug-info-content.vetlek-source h2 {
+    color: #2c3e50;
+    margin: 20px 0 10px;
+    font-size: 20px;
+}
+
+.drug-info-content.vetlek-source p {
+    margin: 10px 0;
+    line-height: 1.6;
+    color: #4a5568;
+}
+
+.drug-info-content.vidal-source .drug-section + .drug-section {
+    margin-top: 30px;
+    border-top: 1px solid #dee2e6;
+    padding-top: 20px;
 }
 
 /* Стили для полной информации о препарате */
@@ -2168,4 +2136,86 @@ html {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+#results {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#results.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.drug-content-wrapper {
+    padding: 20px;
+    background: var(--tg-theme-bg-color, #ffffff);
+    border-radius: 0 0 8px 8px;
+}
+
+.drug-content-wrapper h1,
+.drug-content-wrapper h2 {
+    color: var(--tg-theme-text-color, #000000);
+    font-size: 1.4rem;
+    font-weight: 500;
+    margin: 1rem 0;
+}
+
+.drug-content-wrapper h3,
+.drug-content-wrapper h4 {
+    color: var(--tg-theme-text-color, #000000);
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin: 0.8rem 0;
+}
+
+.drug-content-wrapper p {
+    color: var(--tg-theme-text-color, #000000);
+    margin: 0.8rem 0;
+    line-height: 1.6;
+}
+
+.drug-content-wrapper ul,
+.drug-content-wrapper ol {
+    margin: 0.8rem 0;
+    padding-left: 1.5rem;
+}
+
+.drug-content-wrapper li {
+    margin: 0.4rem 0;
+    color: var(--tg-theme-text-color, #000000);
+}
+
+.drug-info-content.vetlek-source {
+    background: var(--tg-theme-bg-color, #ffffff);
+    border: 1px solid var(--tg-theme-hint-color, #dddddd);
+    border-radius: 0 0 8px 8px;
+}
+
+.error-message {
+    text-align: center;
+    padding: 2rem;
+    color: var(--tg-theme-text-color, #dc3545);
+    background: var(--tg-theme-bg-color, #ffffff);
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+.retry-button {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--tg-theme-button-color, #3390ec);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: opacity 0.2s ease;
+}
+
+.retry-button:hover {
+    opacity: 0.9;
 } 
