@@ -3,17 +3,17 @@
 }
 
 :root {
-    --bg-color: #121212;
-    --text-color: #ffffff;
-    --secondary-bg-color: #1e1e1e;
-    --accent-color: #4a86e8;
-    --accent-color-light: #5e9bfa;
+    --text-color: #fff;
+    --bg-color: #18191c;
+    --secondary-bg-color: #232428;
+    --accent-color: #4d8cff;
+    --accent-color-light: #6ea8fe;
     --border-radius: 12px;
     --border-radius-small: 6px;
     --border-radius-medium: 8px;
-    --shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    --shadow-hover: 0 4px 12px rgba(74, 134, 232, 0.2);
-    --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow: 0 2px 8px rgba(0,0,0,0.12);
+    --shadow-hover: 0 4px 16px rgba(0,0,0,0.18);
+    --shadow-light: 0 1px 3px rgba(0,0,0,0.08);
     --border-color: rgba(74, 134, 232, 0.2);
     --hover-bg-color: rgba(74, 134, 232, 0.05);
     --error-color: #ff4444;
