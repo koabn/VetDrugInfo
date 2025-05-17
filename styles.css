@@ -2044,4 +2044,71 @@ html {
 .legend-label {
     margin-right: 18px;
     opacity: 0.85;
+}
+
+.how-to-use-btn {
+    background: var(--accent-color, #4d8cff);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 15px;
+    font-weight: 500;
+    margin-left: 8px;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.how-to-use-btn:hover {
+    background: var(--accent-color-light, #6ea8fe);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+#howToUseModal .modal-content {
+    max-width: 480px;
+    width: 95%;
+    padding: 0;
+    border-radius: 16px;
+    background: var(--secondary-bg-color, #232428);
+    color: var(--text-color, #fff);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+#howToUseModal .modal-header {
+    padding: 20px 24px 10px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: var(--accent-color, #4d8cff);
+    color: #fff;
+    border-radius: 16px 16px 0 0;
+}
+#howToUseModal .modal-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+#howToUseModal .close-modal {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+    margin-left: auto;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+#howToUseModal .close-modal:hover {
+    opacity: 1;
+}
+#howToUseModal .modal-body {
+    padding: 22px 24px 18px 24px;
+    font-size: 15px;
+    color: var(--text-color, #fff);
+    background: var(--secondary-bg-color, #232428);
+    border-radius: 0 0 16px 16px;
+}
+#howToUseModal ul {
+    margin: 0 0 1em 1.2em;
+    padding: 0;
+}
+#howToUseModal li {
+    margin-bottom: 0.7em;
+    line-height: 1.6;
 } 

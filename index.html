@@ -28,6 +28,7 @@
         <div class="search-section">
             <input type="text" id="searchInput" placeholder="Введите название препарата..." class="search-input">
             <button class="search-button">Найти</button>
+            <button id="howToUseBtn" class="how-to-use-btn" type="button">Как пользоваться?</button>
         </div>
         <div class="drug-source-legend">
           <span class="drug-source-circle green"></span>
@@ -178,5 +179,31 @@
     
     <!-- Подключаем наш основной скрипт -->
     <script src="app.v2.js"></script>
+
+    <!-- Модальное окно инструкции -->
+    <div id="howToUseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Как пользоваться приложением</h3>
+                <button class="close-modal" id="closeHowToUse">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ul style="margin: 0 0 1em 1.2em; padding: 0;">
+                    <li>Введите <b>полное название препарата</b> (например, <i>амоксициллин</i>) для наиболее точного поиска.</li>
+                    <li>Поиск ведётся по двум базам: <b></b> с дозировками, оформление может быть временно неидеальным и <b></b> без таблиц, но всегда читаемо.</li>
+                    <li>В результатах поиска напротив каждого препарата отображается цветной кружок:
+                        <ul style="margin: 0.5em 0 0 1.2em;">
+                            <li><span class="drug-source-circle green"></span> — инструкция с таблицами дозировок </li>
+                            <li><span class="drug-source-circle orange"></span> — инструкция без таблиц дозировок </li>
+                        </ul>
+                    </li>
+                    <li>Кликните по названию препарата, чтобы открыть подробную информацию.</li>
+                    <li>Для возврата к поиску используйте кнопку <b>«Назад»</b>.</li>
+                    <li>Если вы нашли ошибку, воспользуйтесь кнопкой <b>⚠️</b> для отправки сообщения.</li>
+                </ul>
+                <p style="opacity:0.7; font-size:13px;">Приложение находится в разработке. Если что-то работает не так — напишите нам!</p>
+            </div>
+        </div>
+    </div>
 </body>
 </html> 

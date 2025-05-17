@@ -99,6 +99,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupEventHandlers();
         // Для начального экрана можно показать все препараты из обеих баз
         // displayFilteredDrugs(searchAllDrugs(''));
+        // === Добавляем обработчики для инструкции ===
+        const howToUseBtn = document.getElementById('howToUseBtn');
+        const howToUseModal = document.getElementById('howToUseModal');
+        const closeHowToUse = document.getElementById('closeHowToUse');
+        if (howToUseBtn && howToUseModal && closeHowToUse) {
+            howToUseBtn.addEventListener('click', () => {
+                howToUseModal.style.display = 'flex';
+                setTimeout(() => howToUseModal.classList.add('visible'), 10);
+            });
+            closeHowToUse.addEventListener('click', () => {
+                howToUseModal.classList.remove('visible');
+                setTimeout(() => howToUseModal.style.display = 'none', 300);
+            });
+            // Закрытие по клику вне окна
+            howToUseModal.addEventListener('click', (e) => {
+                if (e.target === howToUseModal) {
+                    howToUseModal.classList.remove('visible');
+                    setTimeout(() => howToUseModal.style.display = 'none', 300);
+                }
+            });
+        }
+        // === конец блока инструкции ===
     } catch (error) {
         showErrorMessage('Не удалось инициализировать приложение');
     }
