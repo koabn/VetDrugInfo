@@ -58,34 +58,71 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Загружаем данные при старте
     async function loadDrugsData() {
+        console.log('Начинаем загрузку данных...');
+        
         try {
-            console.log('Начинаем загрузку данных...');
-            errorDiv.style.display = 'none';
-            loadingDiv.style.display = 'block';
-            
-            // Загружаем данные из HTML
-            console.log('Загружаем данные из HTML...');
-            newdrugsData = await loadDrugsFromHtml();
-            drugsData = []; // Очищаем старые данные, так как используем только HTML
-
-            console.log('Загрузка завершена:');
-            console.log(`- Всего препаратов: ${newdrugsData.length}`);
-            if (newdrugsData.length > 0) {
-                console.log('- Пример первого препарата:', {
-                    id: newdrugsData[0].id,
-                    name: newdrugsData[0].name,
-                    hasHtml: !!newdrugsData[0].html
-                });
+            // Загружаем данные из HTML файла
+            const response = await fetch('api/all_drugs.html');
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status}`);
             }
-
-            loadingDiv.style.display = 'none';
-            return true;
+            
+            const html = await response.text();
+            console.log('HTML файл загружен, размер:', html.length);
+            
+            // Создаем парсер
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Получаем все статьи
+            const articles = doc.querySelectorAll('article');
+            console.log('Найдено статей:', articles.length);
+            
+            // Преобразуем статьи в массив объектов
+            drugsData = Array.from(articles).map(article => {
+                // Получаем ID статьи
+                const id = article.id;
+                
+                // Получаем название препарата (первый h1 или h2)
+                const titleElement = article.querySelector('h1, h2');
+                const name = titleElement ? titleElement.textContent.trim() : '';
+                
+                // Сохраняем HTML содержимое
+                const html = article.innerHTML;
+                
+                return {
+                    id,
+                    name,
+                    html
+                };
+            });
+            
+            console.log('Данные загружены успешно. Всего препаратов:', drugsData.length);
+            
+            // Обновляем счетчик препаратов
+            const totalDrugsElement = document.getElementById('totalDrugs');
+            if (totalDrugsElement) {
+                totalDrugsElement.textContent = drugsData.length;
+            }
+            
+            // Показываем уведомление об успешной загрузке
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = `Загружено ${drugsData.length} препаратов`;
+            document.body.appendChild(notification);
+            
+            // Удаляем уведомление через 3 секунды
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+            
         } catch (error) {
             console.error('Ошибка при загрузке данных:', error);
-            errorDiv.textContent = `Ошибка при загрузке данных: ${error.message}`;
-            errorDiv.style.display = 'block';
-            loadingDiv.style.display = 'none';
-            return false;
+            const errorDiv = document.getElementById('error');
+            if (errorDiv) {
+                errorDiv.textContent = 'Ошибка при загрузке данных: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
         }
     }
     
@@ -233,6 +270,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Проверяем, загружены ли данные
         if (!drugsData || !drugsData.length) {
             console.error('Данные препаратов не загружены');
+            const errorDiv = document.getElementById('error');
+            if (errorDiv) {
+                errorDiv.textContent = 'Данные препаратов не загружены';
+                errorDiv.style.display = 'block';
+            }
             return [];
         }
         
@@ -264,6 +306,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return true;
             }
             
+            // Нечеткий поиск по имени
+            const similarity = stringSimilarity(searchFields.name, normalizedQuery);
+            if (similarity > 0.7) {
+                console.log('Найдено нечеткое совпадение:', drug.name, 'схожесть:', similarity);
+                return true;
+            }
+            
             return false;
         }
         
@@ -273,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Если есть результаты, показываем их
         if (results.length > 0) {
-            console.log('Первый найденный препарат:', results[0]);
+            console.log('Первый найденный препарат:', results[0].name);
             showDrugOptions(results);
         } else {
             console.log('Препараты не найдены');
@@ -367,6 +416,12 @@ document.addEventListener('DOMContentLoaded', () => {
             drugOptionsContainer.innerHTML = '<div class="no-results">Ничего не найдено</div>';
             return;
         }
+        
+        // Создаем заголовок с количеством найденных препаратов
+        const header = document.createElement('div');
+        header.className = 'search-results-header';
+        header.innerHTML = `<h2>Найдено препаратов: ${results.length}</h2>`;
+        drugOptionsContainer.appendChild(header);
         
         // Добавляем каждый результат
         results.forEach((drug, index) => {
