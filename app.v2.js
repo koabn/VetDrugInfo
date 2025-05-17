@@ -1,6 +1,55 @@
 let tg = window.Telegram.WebApp;
 
 // Инициализация приложения
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Загружаем данные при старте
+        const data = await loadDrugsData();
+        if (!data) {
+            console.error('Не удалось загрузить данные при инициализации');
+            return;
+        }
+        
+        // Настраиваем обработчики событий
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.querySelector('.search-button');
+        
+        if (!searchInput || !searchButton) {
+            showErrorMessage('Ошибка инициализации: не найдены элементы поиска');
+            return;
+        }
+        
+        // Поиск при нажатии Enter
+        searchInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                startSearch();
+            }
+        });
+        
+        // Поиск при клике на кнопку
+        searchButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            startSearch();
+        });
+        
+        // Настраиваем кнопку "Назад"
+        const backButton = document.getElementById('backButton');
+        if (backButton) {
+            backButton.addEventListener('click', goBack);
+        }
+        
+        // Инициализируем обработчики для категорий
+        initializeCategoryHandlers();
+        
+        console.log('Приложение успешно инициализировано');
+    } catch (error) {
+        console.error('Ошибка при инициализации приложения:', error);
+        showErrorMessage('Не удалось инициализировать приложение');
+    }
+});
+
+// Инициализация приложения
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM загружен, инициализация приложения...');
     
@@ -78,34 +127,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Загружаем данные при старте
     async function loadDrugsData() {
         try {
-            console.log('Начало загрузки данных...');
-            showLoadingMessage('Загрузка данных...');
+            showLoadingMessage('Загрузка базы препаратов...');
             
-            // Загружаем индекс препаратов
-            const indexResponse = await fetch('api/drugs_index.json');
-            console.log('Статус ответа:', indexResponse.status);
-            
-            if (!indexResponse.ok) {
-                throw new Error(`Ошибка загрузки индекса: ${indexResponse.status} ${indexResponse.statusText}`);
+            const response = await fetch('api/drugs_index.json');
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status}`);
             }
             
-            const data = await indexResponse.json();
-            console.log(`Получено ${data.length} препаратов из индекса`);
-            
+            const data = await response.json();
             if (!Array.isArray(data)) {
-                throw new Error('Некорректный формат данных: ожидался массив');
+                throw new Error('Некорректный формат данных');
             }
             
             drugsData = data;
-            console.log('Данные успешно загружены и сохранены');
-            
+            console.log(`Загружено ${drugsData.length} препаратов`);
             hideLoadingMessage();
-            return true;
+            return drugsData;
         } catch (error) {
             console.error('Ошибка при загрузке данных:', error);
-            showErrorMessage(`Не удалось загрузить данные препаратов: ${error.message}`);
             hideLoadingMessage();
-            return false;
+            showErrorMessage(`Не удалось загрузить базу препаратов: ${error.message}`);
+            return null;
         }
     }
     
@@ -1223,4 +1265,51 @@ async function createDrugsIndex(html) {
     
     console.log(`Создан индекс для ${drugsIndex.drugs.length} препаратов`);
     return drugsIndex;
+}
+
+function showLoadingMessage(message = 'Загрузка данных...') {
+    const loadingMessage = document.querySelector('.loading-message');
+    if (loadingMessage) {
+        loadingMessage.textContent = message;
+        loadingMessage.style.display = 'block';
+    }
+}
+
+function hideLoadingMessage() {
+    const loadingMessage = document.querySelector('.loading-message');
+    if (loadingMessage) {
+        loadingMessage.style.display = 'none';
+    }
+}
+
+function showErrorMessage(message) {
+    const errorMessage = document.querySelector('.error-message');
+    if (errorMessage) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        
+        // Автоматически скрываем сообщение об ошибке через 5 секунд
+        setTimeout(() => {
+            hideErrorMessage();
+        }, 5000);
+    }
+}
+
+function hideErrorMessage() {
+    const errorMessage = document.querySelector('.error-message');
+    if (errorMessage) {
+        errorMessage.style.display = 'none';
+    }
+}
+
+function showMessage(message, type = 'info') {
+    hideLoadingMessage();
+    hideErrorMessage();
+    
+    if (type === 'error') {
+        showErrorMessage(message);
+    } else {
+        // Можно добавить другие типы сообщений в будущем
+        console.log(message);
+    }
 }
