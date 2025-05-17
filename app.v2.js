@@ -90,9 +90,9 @@ function searchAllDrugs(query) {
 document.addEventListener('DOMContentLoaded', async () => {
     getDomElements();
     try {
-        tg.ready();
-        tg.setHeaderColor('secondary_bg_color');
-        tg.MainButton.hide();
+    tg.ready();
+    tg.setHeaderColor('secondary_bg_color');
+    tg.MainButton.hide();
         setThemeColors();
         await loadAllBases();
         initializeCategoryHandlers();
@@ -120,8 +120,8 @@ function setupEventHandlers() {
         if (!searchInput) console.error('searchInput не найден!');
         if (!searchButton) console.error('searchButton не найден!');
     }
-    if (backButton) {
-        backButton.addEventListener('click', goBack);
+        if (backButton) {
+            backButton.addEventListener('click', goBack);
     } else {
         console.error('backButton не найден!');
     }
@@ -154,23 +154,23 @@ function setupEventHandlers() {
         });
     }
 }
-
-// Настраиваем тему в зависимости от темы Telegram
-function setThemeColors() {
-    // Получаем тему из Telegram
-    const isDarkTheme = tg.colorScheme === 'dark';
-    document.documentElement.classList.toggle('dark-theme', isDarkTheme);
     
-    // Применяем цвета из Telegram
-    document.documentElement.style.setProperty('--tg-theme-bg-color', tg.backgroundColor);
-    document.documentElement.style.setProperty('--tg-theme-text-color', tg.textColor);
-    document.documentElement.style.setProperty('--tg-theme-hint-color', tg.hint_color);
-    document.documentElement.style.setProperty('--tg-theme-link-color', tg.linkColor);
-    document.documentElement.style.setProperty('--tg-theme-button-color', tg.buttonColor);
-    document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.buttonTextColor);
-    document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.secondaryBackgroundColor);
-}
-
+    // Настраиваем тему в зависимости от темы Telegram
+    function setThemeColors() {
+        // Получаем тему из Telegram
+        const isDarkTheme = tg.colorScheme === 'dark';
+        document.documentElement.classList.toggle('dark-theme', isDarkTheme);
+        
+        // Применяем цвета из Telegram
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.backgroundColor);
+        document.documentElement.style.setProperty('--tg-theme-text-color', tg.textColor);
+        document.documentElement.style.setProperty('--tg-theme-hint-color', tg.hint_color);
+        document.documentElement.style.setProperty('--tg-theme-link-color', tg.linkColor);
+        document.documentElement.style.setProperty('--tg-theme-button-color', tg.buttonColor);
+        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.buttonTextColor);
+        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.secondaryBackgroundColor);
+    }
+    
 // Получаем элементы интерфейса
 function getDomElements() {
     searchInput = document.getElementById('searchInput');
@@ -204,10 +204,10 @@ function safeGetById(id) {
         console.error(`Элемент #${id} не найден!`);
     }
     return el;
-}
-
-// Функция возврата на главный экран
-function goBack() {
+    }
+    
+    // Функция возврата на главный экран
+    function goBack() {
     // Скрываем информацию о препарате
     const drugInfo = document.getElementById('drug-info');
     if (drugInfo) {
@@ -227,24 +227,24 @@ function goBack() {
 }
 
 // Поиск по обеим базам
-async function startSearch() {
-    const query = searchInput.value.trim();
-    if (!query) {
-        showErrorMessage('Введите название препарата');
-        return;
-    }
-    showLoadingMessage('Поиск препаратов...');
+    async function startSearch() {
+        const query = searchInput.value.trim();
+        if (!query) {
+            showErrorMessage('Введите название препарата');
+            return;
+        }
+        showLoadingMessage('Поиск препаратов...');
     try {
         const results = searchAllDrugs(query);
-        displayFilteredDrugs(results);
-        showBackButton();
-    } catch (error) {
-        showErrorMessage('Произошла ошибка при поиске препаратов');
-    } finally {
-        hideLoadingMessage();
+                displayFilteredDrugs(results);
+                showBackButton();
+        } catch (error) {
+            showErrorMessage('Произошла ошибка при поиске препаратов');
+        } finally {
+            hideLoadingMessage();
+        }
     }
-}
-
+    
 // Отображение результатов поиска
 function displayFilteredDrugs(results) {
     const drugList = document.getElementById('drug-list');
@@ -260,12 +260,32 @@ function displayFilteredDrugs(results) {
         drugDiv.className = 'drug-option';
         drugDiv.innerHTML = `<h3>${name}</h3>`;
         drugDiv.addEventListener('click', () => {
-            displayDrugInfoMulti(item);
+            showDrugInfoPage(item);
         });
         drugList.appendChild(drugDiv);
+        setTimeout(() => drugDiv.classList.add('visible'), 10);
     });
     resultsSection.style.display = 'block';
     resultsSection.classList.add('visible');
+    // Скрываем инфоблок, если был открыт
+    const drugInfo = document.getElementById('drug-info');
+    if (drugInfo) {
+        drugInfo.style.display = 'none';
+        drugInfo.classList.remove('visible');
+    }
+}
+
+// Показываем отдельную страницу с информацией о препарате
+function showDrugInfoPage(item) {
+    // Скрываем поиск и результаты
+    const searchSection = document.querySelector('.search-section');
+    if (searchSection) searchSection.style.display = 'none';
+    if (resultsSection) {
+        resultsSection.style.display = 'none';
+        resultsSection.classList.remove('visible');
+    }
+    // Показываем инфоблок
+    displayDrugInfoMulti(item);
 }
 
 // Отображение информации о препарате с двумя источниками
@@ -376,10 +396,10 @@ function renderDosageTable(table) {
     });
     html += '</tbody></table>';
     return html;
-}
+    }
 
 // Функция для отображения информации о препарате
-async function displayDrugInfo_global(drug) {
+    async function displayDrugInfo_global(drug) {
     console.log('Отображение информации о препарате:', drug.name);
     if (!drug) return;
 
@@ -745,116 +765,116 @@ function getDrugDataInfo(drug) {
     return { source, dataType };
 }
 
-// Функция для отображения модального окна сообщения об ошибке
-async function reportError() {
-    const errorModal = document.getElementById('errorModal');
-    
-    // Устанавливаем имя текущего препарата
-    if (currentDrug && currentDrug.name) {
-        const errorDrugNameElement = document.getElementById('errorDrugName');
-        if (errorDrugNameElement) {
-            errorDrugNameElement.textContent = currentDrug.name;
-        }
-    }
-    
-    errorModal.style.display = 'flex';
-    setTimeout(() => {
-        errorModal.classList.add('visible');
-    }, 10);
-}
-
-// Функция закрытия модального окна
-function closeErrorModal() {
-    const errorModal = document.getElementById('errorModal');
-    errorModal.classList.remove('visible');
-    setTimeout(() => {
-        errorModal.style.display = 'none';
-        document.getElementById('errorComment').value = '';
-    }, 300);
-}
-
-// Функция для отправки сообщения об ошибке
-async function sendErrorReport() {
-    const comment = document.getElementById('errorComment').value.trim();
-    if (!comment) {
-        tg.showAlert('Пожалуйста, опишите проблему');
-        return;
-    }
-
-    const userData = tg.initDataUnsafe;
-    let errorData = {
-        date: new Date().toLocaleString(),
-        user: userData?.user?.username || 'Не указан',
-        userId: userData?.user?.id || 'Не доступен',
-        context: currentDrug ? `Препарат: ${currentDrug.name}` : 'Поиск',
-        comment: comment
-    };
-
-    try {
-        // Используем Telegram WebApp для отправки сообщения боту
-        const drugName = currentDrug ? encodeURIComponent(currentDrug.name) : 'unknown';
-        window.Telegram.WebApp.openTelegramLink(`https://t.me/vetaptekibot?start=report_${drugName}_${encodeURIComponent(comment)}`);
+    // Функция для отображения модального окна сообщения об ошибке
+    async function reportError() {
+        const errorModal = document.getElementById('errorModal');
         
-        closeErrorModal();
-
-        // Создаем и показываем уведомление
-        const notification = document.createElement('div');
-        notification.className = 'notification';
-        notification.textContent = 'Спасибо! Сообщение об ошибке отправлено.';
-        document.body.appendChild(notification);
-
-        setTimeout(() => notification.classList.add('show'), 100);
+        // Устанавливаем имя текущего препарата
+        if (currentDrug && currentDrug.name) {
+            const errorDrugNameElement = document.getElementById('errorDrugName');
+            if (errorDrugNameElement) {
+                errorDrugNameElement.textContent = currentDrug.name;
+            }
+        }
+        
+        errorModal.style.display = 'flex';
         setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 300);
-        }, 3000);
-        
-    } catch (error) {
-        console.error('Ошибка при отправке сообщения:', error);
-        tg.showAlert('Извините, не удалось отправить сообщение об ошибке.');
+            errorModal.classList.add('visible');
+        }, 10);
     }
-}
 
-function showBackButton() {
-    const backButton = document.getElementById('backButton');
-    const header = document.querySelector('.app-header');
-    
-    // Плавно скрываем заголовок
-    header.classList.add('hidden');
-    
-    // После начала анимации заголовка показываем кнопку
-    setTimeout(() => {
-        backButton.style.display = 'flex';
-        requestAnimationFrame(() => {
-            backButton.classList.add('visible');
-        });
-    }, 250);
-}
+    // Функция закрытия модального окна
+    function closeErrorModal() {
+        const errorModal = document.getElementById('errorModal');
+        errorModal.classList.remove('visible');
+        setTimeout(() => {
+            errorModal.style.display = 'none';
+            document.getElementById('errorComment').value = '';
+        }, 300);
+    }
 
-function hideBackButton() {
-    const backButton = document.getElementById('backButton');
-    const header = document.querySelector('.app-header');
-    
-    // Сначала скрываем кнопку
-    backButton.classList.remove('visible');
-    
-    // После завершения анимации кнопки показываем заголовок
-    setTimeout(() => {
-        backButton.style.display = 'none';
-        requestAnimationFrame(() => {
-            header.classList.remove('hidden');
-        });
-    }, 250);
-}
+    // Функция для отправки сообщения об ошибке
+    async function sendErrorReport() {
+        const comment = document.getElementById('errorComment').value.trim();
+        if (!comment) {
+            tg.showAlert('Пожалуйста, опишите проблему');
+            return;
+        }
 
-// Добавляем обработчик клавиши Escape для закрытия модального окна
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        const modal = document.getElementById('drugInfoModal');
-        if (modal.style.display === 'flex') {
-            modal.style.display = 'none';
+        const userData = tg.initDataUnsafe;
+        let errorData = {
+            date: new Date().toLocaleString(),
+            user: userData?.user?.username || 'Не указан',
+            userId: userData?.user?.id || 'Не доступен',
+            context: currentDrug ? `Препарат: ${currentDrug.name}` : 'Поиск',
+            comment: comment
+        };
+
+        try {
+            // Используем Telegram WebApp для отправки сообщения боту
+            const drugName = currentDrug ? encodeURIComponent(currentDrug.name) : 'unknown';
+            window.Telegram.WebApp.openTelegramLink(`https://t.me/vetaptekibot?start=report_${drugName}_${encodeURIComponent(comment)}`);
+            
+            closeErrorModal();
+
+            // Создаем и показываем уведомление
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = 'Спасибо! Сообщение об ошибке отправлено.';
+            document.body.appendChild(notification);
+
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+            
+        } catch (error) {
+            console.error('Ошибка при отправке сообщения:', error);
+            tg.showAlert('Извините, не удалось отправить сообщение об ошибке.');
         }
     }
+
+    function showBackButton() {
+        const backButton = document.getElementById('backButton');
+        const header = document.querySelector('.app-header');
+        
+        // Плавно скрываем заголовок
+        header.classList.add('hidden');
+        
+        // После начала анимации заголовка показываем кнопку
+        setTimeout(() => {
+            backButton.style.display = 'flex';
+            requestAnimationFrame(() => {
+                backButton.classList.add('visible');
+            });
+        }, 250);
+    }
+
+    function hideBackButton() {
+        const backButton = document.getElementById('backButton');
+        const header = document.querySelector('.app-header');
+        
+        // Сначала скрываем кнопку
+        backButton.classList.remove('visible');
+        
+        // После завершения анимации кнопки показываем заголовок
+        setTimeout(() => {
+            backButton.style.display = 'none';
+            requestAnimationFrame(() => {
+                header.classList.remove('hidden');
+            });
+        }, 250);
+    }
+
+    // Добавляем обработчик клавиши Escape для закрытия модального окна
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('drugInfoModal');
+            if (modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            }
+        }
 });
 
 // Обновляем функцию initApp, удаляя инициализацию фильтров
